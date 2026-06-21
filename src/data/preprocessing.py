@@ -14,6 +14,7 @@ def load_data(file_path, sample_size_per_class=35000):
     if 'id' in df.columns:
         df = df.drop(columns=['id'])
 
+    # df = features_engineering(df)
     target_col = "Irrigation_Need"
 
     if sample_size_per_class is None:
@@ -40,6 +41,21 @@ def load_data(file_path, sample_size_per_class=35000):
 
     return X, y
 
+def features_engineering(df):
+    """
+    Trying to create new features based on climatic logic 
+    to help the models to converge faster
+    """ 
+    # Total water stored in the terrain
+    df['Total_water_input'] = df['Rainfall_mm'] + df['Previous_Irrigation_mm']
+    # Evaportaion risk index
+    df['Evaporation_proxy'] = df['Temperature_C'] / (df['Humidity'] + 1e-5)
+    # Daily thermo impact
+    df['Thermal impact'] = df['Temperature_C'] * df['Sunlight_Hours']
+
+    return df
+
+
 def get_pipeline_transformer():
     """
     Define trasnformer pipeline for numerical and categorial columns.
@@ -48,7 +64,8 @@ def get_pipeline_transformer():
     numerical_cols = [
         'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 
         'Temperature_C', 'Humidity', 'Rainfall_mm', 'Sunlight_Hours', 
-        'Wind_Speed_kmh', 'Field_Area_hectare', 'Previous_Irrigation_mm'
+        'Wind_Speed_kmh', 'Field_Area_hectare', 'Previous_Irrigation_mm',
+        # 'Total_Water_Input', 'Evaporation_Proxy', 'Thermal_Impact'
     ]
 
     categorical_cols = [
