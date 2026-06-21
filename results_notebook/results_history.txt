@@ -1,0 +1,84 @@
+==== ESECUZIONE NO BIG DATA E NO FEATURE ENGINEERING =====
+--- Performance evaluation for: K-NN ---
+              precision    recall  f1-score   support
+
+         Low       0.86      0.81      0.84      7000
+      Medium       0.75      0.73      0.74      7000
+        High       0.77      0.87      0.82      4202
+
+    accuracy                           0.80     18202
+   macro avg       0.79      0.81      0.80     18202
+weighted avg       0.80      0.80      0.80     18202
+
+Macro F1-Score Globale: 0.7991
+Accuracy: 0.7962
+Recall: 0.8058
+Precision: 0.7947
+Confusion matrix graph saved in: results_notebook\confusion_matrix_k-nn.png
+
+--- Performance evaluation for: RBF SVM ---
+              precision    recall  f1-score   support
+
+         Low       0.95      0.94      0.95      7000
+      Medium       0.89      0.90      0.90      7000
+        High       0.92      0.92      0.92      4202
+
+    accuracy                           0.92     18202
+   macro avg       0.92      0.92      0.92     18202
+weighted avg       0.92      0.92      0.92     18202
+
+Macro F1-Score Globale: 0.9199
+Accuracy: 0.9202
+Recall: 0.9199
+Precision: 0.9199
+
+==== ESECUZIONE NO BIG DATA SI FEATURE ENGINEERING ====
+--- Performance evaluation for: K-NN ---
+              precision    recall  f1-score   support
+
+         Low       0.86      0.81      0.83      7000
+      Medium       0.75      0.73      0.74      7000
+        High       0.78      0.89      0.83      4202
+
+    accuracy                           0.79     18202
+   macro avg       0.79      0.81      0.80     18202
+weighted avg       0.80      0.79      0.79     18202
+
+Macro F1-Score Globale: 0.7992
+Accuracy: 0.7950
+Recall: 0.8073
+Precision: 0.7940
+Confusion matrix graph saved in: results_notebook\confusion_matrix_k-nn.png
+
+--- Performance evaluation for: RBF SVM ---
+              precision    recall  f1-score   support
+
+         Low       0.95      0.94      0.95      7000
+      Medium       0.89      0.90      0.90      7000
+        High       0.91      0.92      0.92      4202
+
+    accuracy                           0.92     18202
+   macro avg       0.92      0.92      0.92     18202
+weighted avg       0.92      0.92      0.92     18202
+
+Macro F1-Score Globale: 0.9210
+Accuracy: 0.9213
+Recall: 0.9215
+Precision: 0.9207
+
+==== ESECUZIONE SI BIG DATA SI FEATURE ENGINEERING ====
+--- Performance evaluation for: Linear SVM ---
+              precision    recall  f1-score   support
+
+         Low       0.91      0.91      0.91     73983
+      Medium       0.81      0.86      0.83     47815
+        High       0.79      0.37      0.51      4202
+
+    accuracy                           0.87    126000
+   macro avg       0.84      0.71      0.75    126000
+weighted avg       0.87      0.87      0.87    126000
+
+Macro F1-Score Globale: 0.7506
+Accuracy: 0.8706
+Recall: 0.7126
+Precision: 0.8399

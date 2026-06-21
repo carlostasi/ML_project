@@ -30,7 +30,7 @@ def evaluate_model(model, X_test, y_test, model_name="Model"):
     
     return y_pred 
     
-def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="results_notebook"):
+def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="results_notebook", big_data=False):
     
     target_names = ['Low', 'Medium', 'High']
     
@@ -46,8 +46,8 @@ def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="r
     plt.tight_layout()
 
     os.makedirs(output_dir, exist_ok=True)
-
-    filename = f"confusion_matrix_{model_name.lower().replace(' ', '_')}.png"
+    if big_data:
+        filename = f"confusion_matrix_{model_name.lower().replace(' ', '_')}_UsedBigData.png"
     filepath = os.path.join(output_dir, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()

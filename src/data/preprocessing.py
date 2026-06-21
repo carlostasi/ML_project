@@ -13,7 +13,7 @@ def load_data(file_path, sample_size_per_class=35000):
     if 'id' in df.columns:
         df = df.drop(columns=['id'])
 
-    # df = features_engineering(df)
+    df = features_engineering(df)
     target_col = "Irrigation_Need"
 
     if sample_size_per_class is None:
@@ -50,7 +50,7 @@ def features_engineering(df):
     # Evaportaion risk index
     df['Evaporation_proxy'] = df['Temperature_C'] / (df['Humidity'] + 1e-5)
     # Daily thermo impact
-    df['Thermal impact'] = df['Temperature_C'] * df['Sunlight_Hours']
+    df['Thermal_impact'] = df['Temperature_C'] * df['Sunlight_Hours']
 
     return df
 
@@ -64,7 +64,7 @@ def get_pipeline_transformer():
         'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 
         'Temperature_C', 'Humidity', 'Rainfall_mm', 'Sunlight_Hours', 
         'Wind_Speed_kmh', 'Field_Area_hectare', 'Previous_Irrigation_mm',
-        # 'Total_Water_Input', 'Evaporation_Proxy', 'Thermal_Impact'
+        'Total_water_input', 'Evaporation_proxy', 'Thermal_impact'
     ]
 
     categorical_cols = [
