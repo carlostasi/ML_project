@@ -1,4 +1,3 @@
-from pandas._typing import StataDateFormat
 from sklearn.compose import _column_transformer
 import collections
 import pandas as pd

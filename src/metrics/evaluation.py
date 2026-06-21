@@ -1,5 +1,5 @@
 import os 
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix, f1_score, accuracy_score, recall_score, precision_score
 
@@ -21,8 +21,8 @@ def evaluate_model(model, X_test, y_test, model_name="Model"):
     print(f"Macro F1-Score Globale: {macro_f1:.4f}")
 
     accuracy = accuracy_score(y_test, y_pred)
-    recall = recall_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred, average='macro')
+    precision = precision_score(y_test, y_pred, average='macro')
 
     print(f"\nAccuracy: {accuracy:.4f}")
     print(f"\nRecall: {recall:.4f}")
