@@ -9,7 +9,7 @@ def print_log(message):
     print(f"\n[{time}] {message}")
 
 def main():
-    USE_BIG_DATA = True
+    USE_BIG_DATA = False
 
     dataset_path = os.path.join('data', 'train.csv')
 
@@ -18,7 +18,7 @@ def main():
         return
 
     print_log("=== PHASE 1: Loading data & Feature Engineering??? ===")
-    sample_size = None if USE_BIG_DATA else 35000
+    sample_size = None if USE_BIG_DATA else 21000
     X, y = load_data(dataset_path, sample_size_per_class=sample_size)
     print_log(f"Dataset ready. Rows: {X.shape[0]}, Columns: {X.shape[1]}")
     # print("Colonne effettive in X:", X.columns.tolist())

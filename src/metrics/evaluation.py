@@ -48,6 +48,8 @@ def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="r
     os.makedirs(output_dir, exist_ok=True)
     if big_data:
         filename = f"confusion_matrix_{model_name.lower().replace(' ', '_')}_UsedBigData.png"
+    else:
+        filename = f"confusion_matrix_{model_name.lower().replace(' ', '_')}.png"
     filepath = os.path.join(output_dir, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
