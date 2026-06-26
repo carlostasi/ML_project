@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from src.data.preprocessing import load_data, get_pipeline_transformer, dataset_setup
-from src.models.models import run_svm, run_knn
+from src.models.models import run_svm, run_knn, run_xgboost, run_random_forest
 from src.metrics.evaluation import evaluate_model, plot_save_confusion_matrix
 
 def print_log(message):
@@ -34,16 +34,35 @@ def main():
     X_test_processed = transformer.transform(X_test)
     print_log(f"Pre-processing completed. Feature post-encoding: {X_train_processed.shape[1]}")
 
-    print_log("=== PHASE 3: Training and tuning K-NN ===")
-    print_log("Cross-Validation per K-NN (K=3, 5, )...")
+    print_log("=== PHASE 3: Training and tuning models ===")
+    print("\n" + "="*50)
+    print("K-NN")
+    print("="*50)
+    print_log("Cross-Validation for K-NN (K=3, 5, )...")
     best_knn, knn_results = run_knn(X_train_processed, y_train, bypass=USE_BIG_DATA)
     print_log("Best configuration K-NN completed.")
 
-    print_log("=== PHASE 4: Training and tuning SVM ===")
+    print("\n" + "="*50)
+    print("SVM")
+    print("="*50)
     fast_svm_mode = True if USE_BIG_DATA else False
     print_log(f"Cross-Validation for SVM (Fast Mode Linear: {fast_svm_mode})...")
     best_svm, svm_results = run_svm(X_train_processed, y_train, fast_mode=fast_svm_mode)
     print_log("Best configuration SVM completed.")
+
+    print("\n" + "="*50)
+    print("Random Forest")
+    print("="*50)
+    print_log(f"Cross-Validation for Random Forest...")
+    best_rf, rf_results = run_random_forest(X_train_processed, y_train)
+    print_log("Best configuration Random Forest completed.")
+
+    print("\n" + "="*50)
+    print("XGBoost")
+    print("="*50)
+    print_log(f"Cross-Validation for XGBoost...")
+    best_xg, xg_results = run_xgboost(X_train_processed, y_train)
+    print_log("Best configuration XGBoost completed.")
 
     print_log("=== PHASE 5: Final Evaluation on test data ===")
     # KNN
@@ -55,6 +74,15 @@ def main():
     svm_label = "Linear SVM" if fast_svm_mode else "RBF SVM"
     y_pred_svm = evaluate_model(best_svm, X_test_processed, y_test, model_name=svm_label)
     plot_save_confusion_matrix(y_test, y_pred_svm, model_name=svm_label, big_data=USE_BIG_DATA)
+
+    # Random Forest
+    y_pred_rf = evaluate_model(best_rf, X_test_processed, y_test, model_name="Random Forest")
+    plot_save_confusion_matrix(y_test, y_pred_rf, model_name="Random Forest", big_data=USE_BIG_DATA)
+
+    # XGBoost
+    y_pred_xg = evaluate_model(best_xg, X_test_processed, y_test, model_name="XGBoost")
+    plot_save_confusion_matrix(y_test, y_pred_xg, model_name="XGBoost", big_data=USE_BIG_DATA)
+
 
     print_log("=== Pipeline executed with success! ===")
 
