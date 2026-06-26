@@ -1,5 +1,4 @@
 from sklearn.compose import _column_transformer
-import collections
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -7,7 +6,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-def load_data(file_path, sample_size_per_class=35000):
+def load_data(file_path, sample_size_per_class):
     df = pd.read_csv(file_path)
 
     if 'id' in df.columns:
@@ -62,9 +61,10 @@ def get_pipeline_transformer():
     """
     numerical_cols = [
         'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 
-        'Temperature_C', 'Humidity', 'Rainfall_mm', 'Sunlight_Hours', 
-        'Wind_Speed_kmh', 'Field_Area_hectare', 'Previous_Irrigation_mm',
-        'Total_water_input', 'Evaporation_proxy', 'Thermal_impact'
+        'Temperature_C', 'Humidity', 'Sunlight_Hours', 
+        'Wind_Speed_kmh', 'Field_Area_hectare',
+        'Total_water_input', 'Evaporation_proxy', 'Thermal_impact',
+        # 'Rainfall_mm', 'Previous_Irrigation_mm'
     ]
 
     categorical_cols = [

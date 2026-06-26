@@ -8,7 +8,7 @@ def run_knn(X_train, y_train, bypass=False):
         return None, None
     knn = KNeighborsClassifier()
 
-    param_grid = {'n_neighbors': [3, 5, 7, 9, 11]}
+    param_grid = {'n_neighbors': [3, 5, 7, 9, 11, 31, 51, 101, 151, 200]}
 
     grid_search = GridSearchCV(knn, param_grid, cv=3, scoring='f1_macro', n_jobs=-1, verbose=3)
     grid_search.fit(X_train, y_train)

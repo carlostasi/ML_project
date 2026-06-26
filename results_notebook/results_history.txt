@@ -100,7 +100,7 @@ Accuracy: 0.8708
 Recall: 0.7128
 Precision: 0.8416
 
-========= TRAIN K Fino ad 11, SVM con 0.1, 1.0, 10.0
+========= TRAIN K Fino ad 11, SVM con 0.1, 1.0, 10.0 NO BIG DATA
 --- Performance evaluation for: K-NN ---
               precision    recall  f1-score   support
 
@@ -172,3 +172,54 @@ Macro F1-Score Globale: 0.9181
 Accuracy: 0.9180
 Recall: 0.9180
 Precision: 0.9182
+
+==== TRAINING SI BIG DATA MA DROP COLUMNS 
+
+
+
+
+
+
+=== TRAINING OMOGENEO DROP COLUMNS
+
+--- Performance evaluation for: K-NN ---
+              precision    recall  f1-score   support
+
+         Low       0.90      0.82      0.86      4200
+      Medium       0.76      0.67      0.71      4200
+        High       0.78      0.94      0.85      4200
+
+    accuracy                           0.81     12600
+   macro avg       0.81      0.81      0.81     12600
+weighted avg       0.81      0.81      0.81     12600
+
+Macro F1-Score Globale: 0.8071
+
+Accuracy: 0.8097
+
+Recall: 0.8097
+
+Precision: 0.8124
+Confusion matrix graph saved in: results_notebook\confusion_matrix_k-nn.png
+
+--- Performance evaluation for: RBF SVM ---
+              precision    recall  f1-score   support
+
+         Low       0.95      0.93      0.94      4200
+      Medium       0.87      0.88      0.88      4200
+        High       0.93      0.94      0.93      4200
+
+    accuracy                           0.92     12600
+   macro avg       0.92      0.92      0.92     12600
+weighted avg       0.92      0.92      0.92     12600
+
+Macro F1-Score Globale: 0.9161
+
+Accuracy: 0.9160
+
+Recall: 0.9160
+
+Precision: 0.9164
+Confusion matrix graph saved in: results_notebook\confusion_matrix_rbf_svm.png
+
+[15:54:39] === Pipeline executed with success! ===

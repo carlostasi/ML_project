@@ -40,7 +40,8 @@ def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="r
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=target_names, yticklabels=target_names)
 
-    plt.title(f"Confusion matrix - {model_name}")
+    suffix = "- Entire dataset" if big_data else None
+    plt.title(f"Confusion matrix - {model_name} ({suffix})")
     plt.ylabel("True label")
     plt.xlabel("Predicted label")
     plt.tight_layout()

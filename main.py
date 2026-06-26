@@ -26,6 +26,9 @@ def main():
     print_log("=== PHASE 2: Split and Preprocessing ===")
     X_train, X_test, y_train, y_test = dataset_setup(X, y)
 
+    X_train = X_train.drop(columns=['Rainfall_mm', 'Previous_Irrigation_mm'])
+    X_test = X_test.drop(columns=['Rainfall_mm', 'Previous_Irrigation_mm'])
+
     transformer = get_pipeline_transformer()
     X_train_processed = transformer.fit_transform(X_train)
     X_test_processed = transformer.transform(X_test)
