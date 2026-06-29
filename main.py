@@ -3,6 +3,7 @@ from datetime import datetime
 from src.data.preprocessing import load_data, get_pipeline_transformer, dataset_setup
 from src.models.models import run_svm, run_knn, run_xgboost, run_random_forest
 from src.metrics.evaluation import evaluate_model, plot_save_confusion_matrix
+from src.metrics.visualization import plot_decision_boundaries_2d, run_knn_with_pca_experiment, plot_correlation_matrix
 
 def print_log(message):
     time = datetime.now().strftime("%H:%M:%S")
@@ -25,6 +26,7 @@ def main():
 
     print_log("=== PHASE 2: Split and Preprocessing ===")
     X_train, X_test, y_train, y_test = dataset_setup(X, y)
+    plot_correlation_matrix(X_train)
 
     X_train = X_train.drop(columns=['Rainfall_mm', 'Previous_Irrigation_mm'])
     X_test = X_test.drop(columns=['Rainfall_mm', 'Previous_Irrigation_mm'])
@@ -64,7 +66,7 @@ def main():
     best_xg, xg_results = run_xgboost(X_train_processed, y_train)
     print_log("Best configuration XGBoost completed.")
 
-    print_log("=== PHASE 5: Final Evaluation on test data ===")
+    print_log("=== PHASE 4: Final Evaluation on test data ===")
     # KNN
     if best_knn is not None:
         y_pred_knn = evaluate_model(best_knn, X_test_processed, y_test, model_name="K-NN")
@@ -82,6 +84,19 @@ def main():
     # XGBoost
     y_pred_xg = evaluate_model(best_xg, X_test_processed, y_test, model_name="XGBoost")
     plot_save_confusion_matrix(y_test, y_pred_xg, model_name="XGBoost", big_data=USE_BIG_DATA)
+
+    print_log("=== PHASE 5: Generation of decision boundaries plots (PCA 2D) === ")
+
+    if not USE_BIG_DATA:
+        plot_decision_boundaries_2d(X_train_processed, y_train, model_name="K-NN (K=31)", model_type="knn", knn_k=31)
+        plot_decision_boundaries_2d(X_train_processed, y_train, model_name="RBF SVM (C=10)", model_type="svm_rbf", svm_c=10.0)
+    else:
+        plot_decision_boundaries_2d(X_train_processed, y_train, model_name="LINEAR SVM", model_type="linear_svm", svm_c=1.0)
+
+    print("\n=== Run experiment (PCA + K-NN) ===")
+    # Lanciamo il test riducendo lo spazio a 3 componenti principali per vedere l'effetto sul K-NN
+    if not USE_BIG_DATA:
+        run_knn_with_pca_experiment(X_train_processed, y_train, X_test_processed, y_test, n_neighbors=31, n_components=3)
 
 
     print_log("=== Pipeline executed with success! ===")
