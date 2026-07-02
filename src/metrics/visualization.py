@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from sklearn.decomposition import PCA
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import classification_report, f1_score
+from sklearn.metrics import classification_report, f1_score, roc_curve, auc
+from sklearn.preprocessing import label_binarize
 
 def plot_decision_boundaries_2d(X_train, y_train, model_name, model_type, knn_k=31, svm_c=10.0, output_dir="plots_notebook"):
     from main import print_log
@@ -123,3 +124,74 @@ def plot_correlation_matrix(df, output_dir="results_notebook"):
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"Correlation Matrix saved with success in: {filepath}")
+
+def plot_feature_importance(model, feature_names, outout_dir="results_notebook", filename="feature_importance.png"):
+    if not hasattr(model, "feature_importances_"):
+        print(f"[WARNING] Model {type(model).__name__} doesn't support the feature importance. Plot skipped.")
+        return
+    
+    print(f"Generation Feature Importance for {type(model).__name__}...")
+    importances = model.feature_importances_
+
+    indices = np.argsort(importances)[::-1]
+
+    plt.figure(figsize=(10, 6))
+    plt.barh(range(len(importances)), importances[indices], align="center", color="teal")
+    plt.yticks(range(len(importances)), [feature_names[i] for i in indices])
+    plt.xlabel("Importance Score")
+    plt.title(f"Feature Importance Matrix - {type(model).__name__}", fontsize=12, pad=15)
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+
+    os.makedirs(outout_dir, exist_ok=True)
+    filepath = os.path.join(outout_dir, filename)
+    plt.savefig(filepath, dpi=300)
+    plt.close()
+    print(f"Feature Importance saved: {filepath}")
+
+def plot_multiclass_roc(model, X_test, y_test, classes=['Low', 'Medium', 'High'], output_dir="results_notebook", filename="roc_curve.png"):
+    print(f"Generation ROC curve for {type(model).__name__}...")
+
+    y_test_bin = label_binarize(y_test, classes=[0, 1, 2])
+    n_classes = y_test_bin.shape[1]
+
+    if hasattr(model, "predict_proba"):
+        y_score = model.predict_proba(X_test)
+    elif hasattr(model, "decision_function"):
+        y_score = model.decision_function(X_test)
+    else:
+        print(f"[WARNING] Model {type(model).__name__} doesn't support the calculation of the probabilities. ROC skipped.")
+        return
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_test_bin[:, i], y_score[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    plt.figure(figsize=(8, 6))
+    colors = ['royalblue', 'forestgreen', 'crimson']
+
+    for i, color in enumerate(colors):
+        plt.plot(
+            fpr[i], tpr[i], color=color, lw=2,
+            label=f"ROC curve: {classes[i]} (AUC = {roc_auc[i]:.4f})"
+        )
+    plt.plot([0, 1], [0, 1], 'k--', lw=1.5)
+
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel("False Positive Rate (1 - Specificity)")
+    plt.ylabel("True Positive Rate (Sensitivity / Recall)")
+    plt.title(f"Receiver Operating Characteristic (OvR) - {type(model).__name__}", fontsize=12, pad=15)
+    plt.legend(loc="lower right")
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.tight_layout()
+
+    os.makedirs(output_dir, exist_ok=True)
+    filepath = os.path.join(output_dir, filename)
+    plt.savefig(filepath, dpi=300)
+    plt.close()
+    print(f"ROC Cruve saved: {filepath}")

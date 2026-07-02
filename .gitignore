@@ -4,3 +4,6 @@ data/*.csv
 # Python cache
 __pycache__/
 *.pyc
+
+# Saved models (binary, regenerable)
+saved_models/

@@ -2,15 +2,17 @@ import os
 from datetime import datetime
 from src.data.preprocessing import load_data, get_pipeline_transformer, dataset_setup
 from src.models.models import run_svm, run_knn, run_xgboost, run_random_forest
+from src.models.load_store import save_model, load_model, model_exists
 from src.metrics.evaluation import evaluate_model, plot_save_confusion_matrix
-from src.metrics.visualization import plot_decision_boundaries_2d, run_knn_with_pca_experiment, plot_correlation_matrix
+from src.metrics.visualization import plot_decision_boundaries_2d, run_knn_with_pca_experiment, plot_correlation_matrix, plot_feature_importance, plot_multiclass_roc
 
 def print_log(message):
     time = datetime.now().strftime("%H:%M:%S")
     print(f"\n[{time}] {message}")
 
 def main():
-    USE_BIG_DATA = False
+    USE_BIG_DATA = True
+    FORCE_RETRAIN = False  # Set to True to ignore saved models and retrain from scratch
 
     dataset_path = os.path.join('data', 'train.csv')
 
@@ -37,34 +39,64 @@ def main():
     print_log(f"Pre-processing completed. Feature post-encoding: {X_train_processed.shape[1]}")
 
     print_log("=== PHASE 3: Training and tuning models ===")
+    fast_svm_mode = True if USE_BIG_DATA else False
+    svm_model_name = "linear_svm" if fast_svm_mode else "rbf_svm"
+
+    # --- K-NN ---
     print("\n" + "="*50)
     print("K-NN")
     print("="*50)
-    print_log("Cross-Validation for K-NN (K=3, 5, )...")
-    best_knn, knn_results = run_knn(X_train_processed, y_train, bypass=USE_BIG_DATA)
-    print_log("Best configuration K-NN completed.")
+    if not FORCE_RETRAIN and model_exists("knn") and not USE_BIG_DATA:
+        best_knn = load_model("knn")
+        knn_results = None
+    elif USE_BIG_DATA:
+        print_log("[INFO] K-NN tuning skipped for RAM limits.")
+        best_knn, knn_results = None, None
+    else:
+        print_log("Cross-Validation for K-NN (K=3, 5, )...")
+        best_knn, knn_results = run_knn(X_train_processed, y_train, bypass=False)
+        if best_knn is not None:
+            save_model(best_knn, "knn")
+        print_log("Best configuration K-NN completed.")
 
+    # --- SVM ---
     print("\n" + "="*50)
     print("SVM")
     print("="*50)
-    fast_svm_mode = True if USE_BIG_DATA else False
-    print_log(f"Cross-Validation for SVM (Fast Mode Linear: {fast_svm_mode})...")
-    best_svm, svm_results = run_svm(X_train_processed, y_train, fast_mode=fast_svm_mode)
-    print_log("Best configuration SVM completed.")
+    if not FORCE_RETRAIN and model_exists(svm_model_name):
+        best_svm = load_model(svm_model_name)
+        svm_results = None
+    else:
+        print_log(f"Cross-Validation for SVM (Fast Mode Linear: {fast_svm_mode})...")
+        best_svm, svm_results = run_svm(X_train_processed, y_train, fast_mode=fast_svm_mode)
+        save_model(best_svm, svm_model_name)
+        print_log("Best configuration SVM completed.")
 
+    # --- Random Forest ---
     print("\n" + "="*50)
     print("Random Forest")
     print("="*50)
-    print_log(f"Cross-Validation for Random Forest...")
-    best_rf, rf_results = run_random_forest(X_train_processed, y_train)
-    print_log("Best configuration Random Forest completed.")
+    if not FORCE_RETRAIN and model_exists("random_forest"):
+        best_rf = load_model("random_forest")
+        rf_results = None
+    else:
+        print_log(f"Cross-Validation for Random Forest...")
+        best_rf, rf_results = run_random_forest(X_train_processed, y_train)
+        save_model(best_rf, "random_forest")
+        print_log("Best configuration Random Forest completed.")
 
+    # --- XGBoost ---
     print("\n" + "="*50)
     print("XGBoost")
     print("="*50)
-    print_log(f"Cross-Validation for XGBoost...")
-    best_xg, xg_results = run_xgboost(X_train_processed, y_train)
-    print_log("Best configuration XGBoost completed.")
+    if not FORCE_RETRAIN and model_exists("xgboost"):
+        best_xg = load_model("xgboost")
+        xg_results = None
+    else:
+        print_log(f"Cross-Validation for XGBoost...")
+        best_xg, xg_results = run_xgboost(X_train_processed, y_train)
+        save_model(best_xg, "xgboost")
+        print_log("Best configuration XGBoost completed.")
 
     print_log("=== PHASE 4: Final Evaluation on test data ===")
     # KNN
@@ -97,6 +129,23 @@ def main():
     # Lanciamo il test riducendo lo spazio a 3 componenti principali per vedere l'effetto sul K-NN
     if not USE_BIG_DATA:
         run_knn_with_pca_experiment(X_train_processed, y_train, X_test_processed, y_test, n_neighbors=31, n_components=3)
+
+    print_log("=== PHASE 6: ROC Curve ===")
+
+    feature_names_encoded = transformer.get_feature_names_out()
+
+    plot_feature_importance(
+        model=best_xg,
+        feature_names=feature_names_encoded,
+        filename="feature_importance_xgboost.png"
+    )
+
+    plot_multiclass_roc(
+        model=best_xg,
+        X_test=X_test_processed,
+        y_test=y_test,
+        filename="roc_curve_xgboost.png"
+    )
 
 
     print_log("=== Pipeline executed with success! ===")

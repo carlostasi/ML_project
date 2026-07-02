@@ -24,9 +24,9 @@ def evaluate_model(model, X_test, y_test, model_name="Model"):
     recall = recall_score(y_test, y_pred, average='macro')
     precision = precision_score(y_test, y_pred, average='macro')
 
-    print(f"\nAccuracy: {accuracy:.4f}")
-    print(f"\nRecall: {recall:.4f}")
-    print(f"\nPrecision: {precision:.4f}")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"Precision: {precision:.4f}")
     
     return y_pred 
     
