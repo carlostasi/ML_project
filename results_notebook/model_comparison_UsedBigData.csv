@@ -1,0 +1,4 @@
+Model_name,F1-Score,Accuracy,Recall,Precision
+Linear SVM,0.7509,0.8711,0.7129,0.8407
+Random Forest,0.9652,0.9843,0.9514,0.9804
+XGBoost,0.9569,0.9818,0.9649,0.9497

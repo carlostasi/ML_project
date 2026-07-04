@@ -1,20 +1,31 @@
 import os
-from datetime import datetime
 from src.data.preprocessing import load_data, get_pipeline_transformer, dataset_setup
-from src.models.models import run_svm, run_knn, run_xgboost, run_random_forest
-from src.models.load_store import save_model, load_model, model_exists
-from src.metrics.evaluation import evaluate_model, plot_save_confusion_matrix
-from src.metrics.visualization import plot_decision_boundaries_2d, run_knn_with_pca_experiment, plot_correlation_matrix, plot_feature_importance, plot_multiclass_roc
-
-def print_log(message):
-    time = datetime.now().strftime("%H:%M:%S")
-    print(f"\n[{time}] {message}")
+from src.models import (
+    run_svm,
+    run_knn,
+    run_xgboost,
+    run_random_forest,
+    save_model,
+    load_model,
+    model_exists,
+)
+from src.metrics import (
+    evaluate_model,
+    plot_save_confusion_matrix,
+    plot_decision_boundaries_2d,
+    run_knn_with_pca_experiment,
+    plot_correlation_matrix,
+    plot_feature_importance,
+    plot_multiclass_roc,
+)
+from src.utils import print_log
+import pandas as pd
 
 def main():
     USE_BIG_DATA = True
-    FORCE_RETRAIN = False  # Set to True to ignore saved models and retrain from scratch
+    FORCE_RETRAIN = True  # Set to True to ignore saved models and retrain from scratch
 
-    dataset_path = os.path.join('data', 'train.csv')
+    dataset_path = os.path.join("data", "train.csv")
 
     if not os.path.exists(dataset_path):
         print_log(f"Error: Dataset file not found")
@@ -30,22 +41,21 @@ def main():
     X_train, X_test, y_train, y_test = dataset_setup(X, y)
     plot_correlation_matrix(X_train)
 
-    X_train = X_train.drop(columns=['Rainfall_mm', 'Previous_Irrigation_mm'])
-    X_test = X_test.drop(columns=['Rainfall_mm', 'Previous_Irrigation_mm'])
-
     transformer = get_pipeline_transformer()
     X_train_processed = transformer.fit_transform(X_train)
     X_test_processed = transformer.transform(X_test)
-    print_log(f"Pre-processing completed. Feature post-encoding: {X_train_processed.shape[1]}")
+    print_log(
+        f"Pre-processing completed. Feature post-encoding: {X_train_processed.shape[1]}"
+    )
 
     print_log("=== PHASE 3: Training and tuning models ===")
     fast_svm_mode = True if USE_BIG_DATA else False
     svm_model_name = "linear_svm" if fast_svm_mode else "rbf_svm"
 
     # --- K-NN ---
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("K-NN")
-    print("="*50)
+    print("=" * 50)
     if not FORCE_RETRAIN and model_exists("knn") and not USE_BIG_DATA:
         best_knn = load_model("knn")
         knn_results = None
@@ -60,22 +70,24 @@ def main():
         print_log("Best configuration K-NN completed.")
 
     # --- SVM ---
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("SVM")
-    print("="*50)
+    print("=" * 50)
     if not FORCE_RETRAIN and model_exists(svm_model_name):
         best_svm = load_model(svm_model_name)
         svm_results = None
     else:
         print_log(f"Cross-Validation for SVM (Fast Mode Linear: {fast_svm_mode})...")
-        best_svm, svm_results = run_svm(X_train_processed, y_train, fast_mode=fast_svm_mode)
+        best_svm, svm_results = run_svm(
+            X_train_processed, y_train, fast_mode=fast_svm_mode
+        )
         save_model(best_svm, svm_model_name)
         print_log("Best configuration SVM completed.")
 
     # --- Random Forest ---
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Random Forest")
-    print("="*50)
+    print("=" * 50)
     if not FORCE_RETRAIN and model_exists("random_forest"):
         best_rf = load_model("random_forest")
         rf_results = None
@@ -86,9 +98,9 @@ def main():
         print_log("Best configuration Random Forest completed.")
 
     # --- XGBoost ---
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("XGBoost")
-    print("="*50)
+    print("=" * 50)
     if not FORCE_RETRAIN and model_exists("xgboost"):
         best_xg = load_model("xgboost")
         xg_results = None
@@ -99,36 +111,76 @@ def main():
         print_log("Best configuration XGBoost completed.")
 
     print_log("=== PHASE 4: Final Evaluation on test data ===")
+    all_metrics = []
     # KNN
     if best_knn is not None:
-        y_pred_knn = evaluate_model(best_knn, X_test_processed, y_test, model_name="K-NN")
-        plot_save_confusion_matrix(y_test, y_pred_knn, model_name="K-NN", big_data=USE_BIG_DATA)
-
+        y_pred_knn, knn_metrics = evaluate_model(
+            best_knn, X_test_processed, y_test, model_name="K-NN"
+        )
+        all_metrics.append(knn_metrics)
+        plot_save_confusion_matrix(
+            y_test, y_pred_knn, model_name="K-NN", big_data=USE_BIG_DATA
+        )
     # SVM
     svm_label = "Linear SVM" if fast_svm_mode else "RBF SVM"
-    y_pred_svm = evaluate_model(best_svm, X_test_processed, y_test, model_name=svm_label)
-    plot_save_confusion_matrix(y_test, y_pred_svm, model_name=svm_label, big_data=USE_BIG_DATA)
-
+    y_pred_svm, svm_metrics = evaluate_model(
+        best_svm, X_test_processed, y_test, model_name=svm_label
+    )
+    plot_save_confusion_matrix(
+        y_test, y_pred_svm, model_name=svm_label, big_data=USE_BIG_DATA
+    )
+    all_metrics.append(svm_metrics)
     # Random Forest
-    y_pred_rf = evaluate_model(best_rf, X_test_processed, y_test, model_name="Random Forest")
-    plot_save_confusion_matrix(y_test, y_pred_rf, model_name="Random Forest", big_data=USE_BIG_DATA)
-
+    y_pred_rf, rf_metrics = evaluate_model(
+        best_rf, X_test_processed, y_test, model_name="Random Forest"
+    )
+    plot_save_confusion_matrix(
+        y_test, y_pred_rf, model_name="Random Forest", big_data=USE_BIG_DATA
+    )
+    all_metrics.append(rf_metrics)
     # XGBoost
-    y_pred_xg = evaluate_model(best_xg, X_test_processed, y_test, model_name="XGBoost")
-    plot_save_confusion_matrix(y_test, y_pred_xg, model_name="XGBoost", big_data=USE_BIG_DATA)
-
+    y_pred_xg, xg_metrics = evaluate_model(best_xg, X_test_processed, y_test, model_name="XGBoost")
+    plot_save_confusion_matrix(
+        y_test, y_pred_xg, model_name="XGBoost", big_data=USE_BIG_DATA
+    )
+    all_metrics.append(xg_metrics)
     print_log("=== PHASE 5: Generation of decision boundaries plots (PCA 2D) === ")
 
     if not USE_BIG_DATA:
-        plot_decision_boundaries_2d(X_train_processed, y_train, model_name="K-NN (K=31)", model_type="knn", knn_k=31)
-        plot_decision_boundaries_2d(X_train_processed, y_train, model_name="RBF SVM (C=10)", model_type="svm_rbf", svm_c=10.0)
+        plot_decision_boundaries_2d(
+            X_train_processed,
+            y_train,
+            model_name="K-NN (K=31)",
+            model_type="knn",
+            knn_k=31,
+        )
+        plot_decision_boundaries_2d(
+            X_train_processed,
+            y_train,
+            model_name="RBF SVM (C=10)",
+            model_type="svm_rbf",
+            svm_c=10.0,
+        )
     else:
-        plot_decision_boundaries_2d(X_train_processed, y_train, model_name="LINEAR SVM", model_type="linear_svm", svm_c=1.0)
+        plot_decision_boundaries_2d(
+            X_train_processed,
+            y_train,
+            model_name="LINEAR SVM",
+            model_type="linear_svm",
+            svm_c=1.0,
+        )
 
     print("\n=== Run experiment (PCA + K-NN) ===")
     # Lanciamo il test riducendo lo spazio a 3 componenti principali per vedere l'effetto sul K-NN
     if not USE_BIG_DATA:
-        run_knn_with_pca_experiment(X_train_processed, y_train, X_test_processed, y_test, n_neighbors=31, n_components=3)
+        run_knn_with_pca_experiment(
+            X_train_processed,
+            y_train,
+            X_test_processed,
+            y_test,
+            n_neighbors=31,
+            n_components=3,
+        )
 
     print_log("=== PHASE 6: ROC Curve ===")
 
@@ -137,18 +189,21 @@ def main():
     plot_feature_importance(
         model=best_xg,
         feature_names=feature_names_encoded,
-        filename="feature_importance_xgboost.png"
+        filename="feature_importance_xgboost.png",
     )
 
     plot_multiclass_roc(
         model=best_xg,
         X_test=X_test_processed,
         y_test=y_test,
-        filename="roc_curve_xgboost.png"
+        filename="roc_curve_xgboost.png",
     )
 
+    metrics_df = pd.DataFrame(all_metrics)
+    metrics_df.to_csv("results_notebook/model_comparison.csv" if not USE_BIG_DATA else "results_notebook/model_comparison_UsedBigData.csv", index=False, float_format="%.4f")
 
     print_log("=== Pipeline executed with success! ===")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

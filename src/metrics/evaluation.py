@@ -28,7 +28,7 @@ def evaluate_model(model, X_test, y_test, model_name="Model"):
     print(f"Recall: {recall:.4f}")
     print(f"Precision: {precision:.4f}")
     
-    return y_pred 
+    return y_pred, {"Model_name": model_name, "F1-Score": macro_f1, "Accuracy": accuracy, "Recall": recall, "Precision": precision} 
     
 def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="results_notebook", big_data=False):
     

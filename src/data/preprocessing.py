@@ -51,6 +51,9 @@ def features_engineering(df):
     # Daily thermo impact
     df['Thermal_impact'] = df['Temperature_C'] * df['Sunlight_Hours']
 
+    cols_to_drop = ['Rainfall_mm', 'Previous_Irrigation_mm']
+    df = df.drop(columns=cols_to_drop)
+
     return df
 
 
