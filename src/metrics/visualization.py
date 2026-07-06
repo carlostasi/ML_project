@@ -10,7 +10,24 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import classification_report, f1_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 from src.utils import print_log
-plt.use('Agg')
+import matplotlib
+matplotlib.use('Agg')
+
+def get_model_folder_from_name(model_name):
+    name = model_name.lower()
+    if 'knn' in name or 'k-nn' in name: return 'KNN'
+    if 'svm' in name: return 'SVM'
+    if 'random forest' in name or 'rf' in name: return 'RandomForest'
+    if 'xgboost' in name: return 'XGBoost'
+    return ''
+
+def get_model_folder(model):
+    name = type(model).__name__.lower()
+    if 'xgb' in name: return 'XGBoost'
+    if 'randomforest' in name: return 'RandomForest'
+    if 'svc' in name: return 'SVM'
+    if 'neighbors' in name: return 'KNN'
+    return ''
 
 
 def plot_decision_boundaries_2d(
@@ -20,7 +37,8 @@ def plot_decision_boundaries_2d(
     model_type,
     knn_k=31,
     svm_c=10.0,
-    output_dir="plots_notebook",
+    output_dir="results_notebook",
+    big_data=False
 ):
     print_log(f"Loading decision boundary plot for: {model_name}")
     pca = PCA(n_components=2, random_state=42)
@@ -81,8 +99,12 @@ def plot_decision_boundaries_2d(
     plt.legend(loc="upper right", title="Real classes")
     plt.tight_layout()
 
-    os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, f"decision_boundary_{model_type}.png")
+    folder = get_model_folder_from_name(model_name)
+    final_output_dir = os.path.join(output_dir, folder) if folder else output_dir
+    os.makedirs(final_output_dir, exist_ok=True)
+    
+    suffix = "_UsedBigData" if big_data else ""
+    filepath = os.path.join(final_output_dir, f"decision_boundary_{model_type}{suffix}.png")
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"Plot saved with success in: {filepath}")
@@ -120,7 +142,7 @@ def run_knn_with_pca_experiment(
     return macro_f1
 
 
-def plot_correlation_matrix(df, output_dir="results_notebook"):
+def plot_correlation_matrix(df, output_dir="results_notebook", big_data=False):
     print(" Loading correlation matrix...")
 
     numeric_df = df.select_dtypes(include=["number"])
@@ -143,7 +165,8 @@ def plot_correlation_matrix(df, output_dir="results_notebook"):
     plt.tight_layout()
 
     os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, "correlation_matrix_2.png")
+    filename = "correlation_matrix_UsedBigData.png" if big_data else "correlation_matrix.png"
+    filepath = os.path.join(output_dir, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"Correlation Matrix saved with success in: {filepath}")
@@ -154,6 +177,7 @@ def plot_feature_importance(
     feature_names,
     output_dir="results_notebook",
     filename="feature_importance.png",
+    big_data=False
 ):
     if not hasattr(model, "feature_importances_"):
         print(
@@ -178,8 +202,15 @@ def plot_feature_importance(
     plt.gca().invert_yaxis()
     plt.tight_layout()
 
-    os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, filename)
+    folder = get_model_folder(model)
+    final_output_dir = os.path.join(output_dir, folder) if folder else output_dir
+    os.makedirs(final_output_dir, exist_ok=True)
+
+    if big_data:
+        base, ext = os.path.splitext(filename)
+        filename = f"{base}_UsedBigData{ext}"
+        
+    filepath = os.path.join(final_output_dir, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"Feature Importance saved: {filepath}")
@@ -192,6 +223,7 @@ def plot_multiclass_roc(
     classes=["Low", "Medium", "High"],
     output_dir="results_notebook",
     filename="roc_curve.png",
+    big_data=False
 ):
     print(f"Generation ROC curve for {type(model).__name__}...")
 
@@ -242,8 +274,15 @@ def plot_multiclass_roc(
     plt.grid(True, linestyle="--", alpha=0.5)
     plt.tight_layout()
 
-    os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, filename)
+    folder = get_model_folder(model)
+    final_output_dir = os.path.join(output_dir, folder) if folder else output_dir
+    os.makedirs(final_output_dir, exist_ok=True)
+
+    if big_data:
+        base, ext = os.path.splitext(filename)
+        filename = f"{base}_UsedBigData{ext}"
+
+    filepath = os.path.join(final_output_dir, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"ROC Cruve saved: {filepath}")

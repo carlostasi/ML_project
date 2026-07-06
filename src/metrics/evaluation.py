@@ -2,6 +2,20 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix, f1_score, accuracy_score, recall_score, precision_score
+import matplotlib
+matplotlib.use('Agg')
+
+def get_model_folder(model_name):
+    name = model_name.lower()
+    if 'knn' in name or 'k-nn' in name:
+        return 'KNN'
+    elif 'svm' in name:
+        return 'SVM'
+    elif 'random forest' in name or 'rf' in name:
+        return 'RandomForest'
+    elif 'xgboost' in name:
+        return 'XGBoost'
+    return ''
 
 def evaluate_model(model, X_test, y_test, model_name="Model"):
     """
@@ -40,18 +54,20 @@ def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="r
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=target_names, yticklabels=target_names)
 
-    suffix = "- Entire dataset" if big_data else None
+    suffix = "- Entire dataset" if big_data else ""
     plt.title(f"Confusion matrix - {model_name} ({suffix})")
     plt.ylabel("True label")
     plt.xlabel("Predicted label")
     plt.tight_layout()
 
-    os.makedirs(output_dir, exist_ok=True)
+    folder = get_model_folder(model_name)
+    final_output_dir = os.path.join(output_dir, folder) if folder else output_dir
+    os.makedirs(final_output_dir, exist_ok=True)
     if big_data:
         filename = f"confusion_matrix_{model_name.lower().replace(' ', '_')}_UsedBigData.png"
     else:
         filename = f"confusion_matrix_{model_name.lower().replace(' ', '_')}.png"
-    filepath = os.path.join(output_dir, filename)
+    filepath = os.path.join(final_output_dir, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
 

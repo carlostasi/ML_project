@@ -40,7 +40,7 @@ def main():
 
     print_log("=== PHASE 2: Split and Preprocessing ===")
     X_train, X_test, y_train, y_test = dataset_setup(X, y)
-    plot_correlation_matrix(X_train)
+    plot_correlation_matrix(X_train, big_data=USE_BIG_DATA)
 
     transformer = get_pipeline_transformer()
     X_train_processed = transformer.fit_transform(X_train)
@@ -113,40 +113,23 @@ def main():
 
     print_log("=== PHASE 4: Final Evaluation on test data ===")
     all_metrics = []
-    # KNN
-    if best_knn is not None:
-        y_pred_knn, knn_metrics = evaluate_model(
-            best_knn, X_test_processed, y_test, model_name="K-NN"
-        )
-        all_metrics.append(knn_metrics)
-        plot_save_confusion_matrix(
-            y_test, y_pred_knn, model_name="K-NN", big_data=USE_BIG_DATA
-        )
-    # SVM
     svm_label = "Linear SVM" if fast_svm_mode else "RBF SVM"
-    y_pred_svm, svm_metrics = evaluate_model(
-        best_svm, X_test_processed, y_test, model_name=svm_label
-    )
-    plot_save_confusion_matrix(
-        y_test, y_pred_svm, model_name=svm_label, big_data=USE_BIG_DATA
-    )
-    all_metrics.append(svm_metrics)
-    # Random Forest
-    y_pred_rf, rf_metrics = evaluate_model(
-        best_rf, X_test_processed, y_test, model_name="Random Forest"
-    )
-    plot_save_confusion_matrix(
-        y_test, y_pred_rf, model_name="Random Forest", big_data=USE_BIG_DATA
-    )
-    all_metrics.append(rf_metrics)
-    # XGBoost
-    y_pred_xg, xg_metrics = evaluate_model(
-        best_xg, X_test_processed, y_test, model_name="XGBoost"
-    )
-    plot_save_confusion_matrix(
-        y_test, y_pred_xg, model_name="XGBoost", big_data=USE_BIG_DATA
-    )
-    all_metrics.append(xg_metrics)
+    models_to_evaluate = [
+        (best_knn, "K-NN"),
+        (best_svm, svm_label),
+        (best_rf, "Random Forest"),
+        (best_xg, "XGBoost")
+    ]
+
+    for model, name in models_to_evaluate:
+        if model is not None:
+            y_pred, metrics = evaluate_model(
+                model, X_test_processed, y_test, model_name=name
+            )
+            all_metrics.append(metrics)
+            plot_save_confusion_matrix(
+                y_test, y_pred, model_name=name, big_data=USE_BIG_DATA
+            )
     print_log("=== PHASE 5: Generation of decision boundaries plots (PCA 2D) === ")
 
     if not USE_BIG_DATA:
@@ -156,6 +139,7 @@ def main():
             model_name="K-NN (K=31)",
             model_type="knn",
             knn_k=31,
+            big_data=USE_BIG_DATA,
         )
         plot_decision_boundaries_2d(
             X_train_processed,
@@ -163,6 +147,7 @@ def main():
             model_name="RBF SVM (C=10)",
             model_type="svm_rbf",
             svm_c=10.0,
+            big_data=USE_BIG_DATA,
         )
     else:
         plot_decision_boundaries_2d(
@@ -171,6 +156,7 @@ def main():
             model_name="LINEAR SVM",
             model_type="linear_svm",
             svm_c=1.0,
+            big_data=USE_BIG_DATA,
         )
 
     print("\n=== Run experiment (PCA + K-NN) ===")
@@ -189,19 +175,28 @@ def main():
 
     feature_names_encoded = transformer.get_feature_names_out()
 
-    plot_feature_importance(
-        model=best_xg,
-        feature_names=feature_names_encoded,
-        filename="feature_importance_xgboost.png",
-    )
+    models_to_plot = [
+        (best_xg, "xgboost"),
+        (best_knn, "knn"),
+        (best_rf, "rf"),
+        (best_svm, "svm"),
+    ]
 
-    plot_multiclass_roc(
-        model=best_xg,
-        X_test=X_test_processed,
-        y_test=y_test,
-        filename="roc_curve_xgboost.png",
-    )
-
+    for model, name in models_to_plot:
+        if model is not None:
+            plot_feature_importance(
+                model=model,
+                feature_names=feature_names_encoded,
+                filename=f"feature_importance_{name}.png",
+                big_data=USE_BIG_DATA
+            )
+            plot_multiclass_roc(
+                model=model,
+                X_test=X_test_processed,
+                y_test=y_test,
+                filename=f"roc_curve_{name}.png",
+                big_data=USE_BIG_DATA
+            )
     metrics_df = pd.DataFrame(all_metrics)
     metrics_df.to_csv(
         (
