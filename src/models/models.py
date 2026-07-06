@@ -1,5 +1,4 @@
 from sklearn.utils import compute_sample_weight
-from prompt_toolkit.key_binding.bindings.scroll import scroll_forward
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC, LinearSVC
 from sklearn.ensemble import RandomForestClassifier
@@ -47,8 +46,14 @@ def run_svm(X_train, y_train, fast_mode=True):
     return grid_search.best_estimator_, grid_search.cv_results_
 
 def run_random_forest(X_train, y_train):
-    param_grid = {'n_estimators': [50, 100, 150, 200, 250, 300]}
-    rf = RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42, n_jobs=-1)
+    param_grid = {
+        'n_estimators': [100, 200, 300],
+        'max_depth': [10, 20, 30, None],
+        'min_samples_split': [2, 5, 10],
+        'min_samples_leaf': [1, 2, 4],
+        
+    }
+    rf = RandomForestClassifier(class_weight='balanced', random_state=42, n_jobs=-1)
     grid_search = GridSearchCV(rf, param_grid, cv=3, scoring='f1_macro', n_jobs=-1, verbose=3)
     grid_search.fit(X_train, y_train)
     

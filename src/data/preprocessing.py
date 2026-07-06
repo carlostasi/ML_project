@@ -1,4 +1,3 @@
-from sklearn.compose import _column_transformer
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -47,9 +46,17 @@ def features_engineering(df):
     # Total water stored in the terrain
     df['Total_water_input'] = df['Rainfall_mm'] + df['Previous_Irrigation_mm']
     # Evaportaion risk index
-    df['Evaporation_proxy'] = df['Temperature_C'] / (df['Humidity'] + 1e-5)
+    # df['Evaporation_proxy'] = df['Temperature_C'] / (df['Humidity'] + 1e-5)
+    evap_proxy = df['Temperature_C'] / (df['Humidity'] + 1e-5)
     # Daily thermo impact
     df['Thermal_impact'] = df['Temperature_C'] * df['Sunlight_Hours']
+
+    # Soil Health (Carbonio Organico scalato sulla deviazione dal pH ottimale di 6.5)
+    ph_deviation = np.abs(df['Soil_pH'] - 6.5)
+    df['Soil_Health'] = df['Organic_Carbon'] / (ph_deviation + 1e-5)
+
+    # Water Deficit (Rapporto tra domanda atmosferica e umidità reale del suolo)
+    df['Water_Deficit'] = evap_proxy / (df['Soil_Moisture'] + 1e-5)
 
     cols_to_drop = ['Rainfall_mm', 'Previous_Irrigation_mm']
     df = df.drop(columns=cols_to_drop)
@@ -66,8 +73,8 @@ def get_pipeline_transformer():
         'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 
         'Temperature_C', 'Humidity', 'Sunlight_Hours', 
         'Wind_Speed_kmh', 'Field_Area_hectare',
-        'Total_water_input', 'Evaporation_proxy', 'Thermal_impact',
-        # 'Rainfall_mm', 'Previous_Irrigation_mm'
+        'Total_water_input', 'Thermal_impact',
+        # 'Rainfall_mm', 'Previous_Irrigation_mm', 'Evaporation_proxy'
     ]
 
     categorical_cols = [

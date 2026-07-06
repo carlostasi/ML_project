@@ -20,10 +20,11 @@ from src.metrics import (
 )
 from src.utils import print_log
 import pandas as pd
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 def main():
-    USE_BIG_DATA = True
-    FORCE_RETRAIN = True  # Set to True to ignore saved models and retrain from scratch
+    USE_BIG_DATA = False
+    FORCE_RETRAIN = False  # Set to True to ignore saved models and retrain from scratch
 
     dataset_path = os.path.join("data", "train.csv")
 
@@ -31,7 +32,7 @@ def main():
         print_log(f"Error: Dataset file not found")
         return
 
-    print_log("=== PHASE 1: Loading data & Feature Engineering??? ===")
+    print_log("=== PHASE 1: Loading data & Feature Engineering ===")
     sample_size = None if USE_BIG_DATA else 21000
     X, y = load_data(dataset_path, sample_size_per_class=sample_size)
     print_log(f"Dataset ready. Rows: {X.shape[0]}, Columns: {X.shape[1]}")
@@ -56,8 +57,8 @@ def main():
     print("\n" + "=" * 50)
     print("K-NN")
     print("=" * 50)
-    if not FORCE_RETRAIN and model_exists("knn") and not USE_BIG_DATA:
-        best_knn = load_model("knn")
+    if not FORCE_RETRAIN and model_exists("knn", use_big_data=USE_BIG_DATA) and not USE_BIG_DATA:
+        best_knn = load_model("knn", use_big_data=USE_BIG_DATA)
         knn_results = None
     elif USE_BIG_DATA:
         print_log("[INFO] K-NN tuning skipped for RAM limits.")
@@ -66,48 +67,48 @@ def main():
         print_log("Cross-Validation for K-NN (K=3, 5, )...")
         best_knn, knn_results = run_knn(X_train_processed, y_train, bypass=False)
         if best_knn is not None:
-            save_model(best_knn, "knn")
+            save_model(best_knn, "knn", use_big_data=USE_BIG_DATA)
         print_log("Best configuration K-NN completed.")
 
     # --- SVM ---
     print("\n" + "=" * 50)
     print("SVM")
     print("=" * 50)
-    if not FORCE_RETRAIN and model_exists(svm_model_name):
-        best_svm = load_model(svm_model_name)
+    if not FORCE_RETRAIN and model_exists(svm_model_name, use_big_data=USE_BIG_DATA):
+        best_svm = load_model(svm_model_name, use_big_data=USE_BIG_DATA)
         svm_results = None
     else:
         print_log(f"Cross-Validation for SVM (Fast Mode Linear: {fast_svm_mode})...")
         best_svm, svm_results = run_svm(
             X_train_processed, y_train, fast_mode=fast_svm_mode
         )
-        save_model(best_svm, svm_model_name)
+        save_model(best_svm, svm_model_name, use_big_data=USE_BIG_DATA)
         print_log("Best configuration SVM completed.")
 
     # --- Random Forest ---
     print("\n" + "=" * 50)
     print("Random Forest")
     print("=" * 50)
-    if not FORCE_RETRAIN and model_exists("random_forest"):
-        best_rf = load_model("random_forest")
+    if not FORCE_RETRAIN and model_exists("random_forest", use_big_data=USE_BIG_DATA):
+        best_rf = load_model("random_forest", use_big_data=USE_BIG_DATA)
         rf_results = None
     else:
         print_log(f"Cross-Validation for Random Forest...")
         best_rf, rf_results = run_random_forest(X_train_processed, y_train)
-        save_model(best_rf, "random_forest")
+        save_model(best_rf, "random_forest", use_big_data=USE_BIG_DATA)
         print_log("Best configuration Random Forest completed.")
 
     # --- XGBoost ---
     print("\n" + "=" * 50)
     print("XGBoost")
     print("=" * 50)
-    if not FORCE_RETRAIN and model_exists("xgboost"):
-        best_xg = load_model("xgboost")
+    if not FORCE_RETRAIN and model_exists("xgboost", use_big_data=USE_BIG_DATA):
+        best_xg = load_model("xgboost", use_big_data=USE_BIG_DATA)
         xg_results = None
     else:
         print_log(f"Cross-Validation for XGBoost...")
         best_xg, xg_results = run_xgboost(X_train_processed, y_train)
-        save_model(best_xg, "xgboost")
+        save_model(best_xg, "xgboost", use_big_data=USE_BIG_DATA)
         print_log("Best configuration XGBoost completed.")
 
     print_log("=== PHASE 4: Final Evaluation on test data ===")
@@ -139,7 +140,9 @@ def main():
     )
     all_metrics.append(rf_metrics)
     # XGBoost
-    y_pred_xg, xg_metrics = evaluate_model(best_xg, X_test_processed, y_test, model_name="XGBoost")
+    y_pred_xg, xg_metrics = evaluate_model(
+        best_xg, X_test_processed, y_test, model_name="XGBoost"
+    )
     plot_save_confusion_matrix(
         y_test, y_pred_xg, model_name="XGBoost", big_data=USE_BIG_DATA
     )
@@ -200,7 +203,15 @@ def main():
     )
 
     metrics_df = pd.DataFrame(all_metrics)
-    metrics_df.to_csv("results_notebook/model_comparison.csv" if not USE_BIG_DATA else "results_notebook/model_comparison_UsedBigData.csv", index=False, float_format="%.4f")
+    metrics_df.to_csv(
+        (
+            "results_notebook/model_comparison.csv"
+            if not USE_BIG_DATA
+            else "results_notebook/model_comparison_UsedBigData.csv"
+        ),
+        index=False,
+        float_format="%.4f",
+    )
 
     print_log("=== Pipeline executed with success! ===")
 

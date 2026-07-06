@@ -10,6 +10,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import classification_report, f1_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 from src.utils import print_log
+plt.use('Agg')
 
 
 def plot_decision_boundaries_2d(
@@ -142,7 +143,7 @@ def plot_correlation_matrix(df, output_dir="results_notebook"):
     plt.tight_layout()
 
     os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, "correlation_matrix.png")
+    filepath = os.path.join(output_dir, "correlation_matrix_2.png")
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"Correlation Matrix saved with success in: {filepath}")
@@ -151,7 +152,7 @@ def plot_correlation_matrix(df, output_dir="results_notebook"):
 def plot_feature_importance(
     model,
     feature_names,
-    outout_dir="results_notebook",
+    output_dir="results_notebook",
     filename="feature_importance.png",
 ):
     if not hasattr(model, "feature_importances_"):
@@ -177,8 +178,8 @@ def plot_feature_importance(
     plt.gca().invert_yaxis()
     plt.tight_layout()
 
-    os.makedirs(outout_dir, exist_ok=True)
-    filepath = os.path.join(outout_dir, filename)
+    os.makedirs(output_dir, exist_ok=True)
+    filepath = os.path.join(output_dir, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"Feature Importance saved: {filepath}")
