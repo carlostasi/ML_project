@@ -53,7 +53,7 @@ def features_engineering(df):
 
     # Soil Health (Carbonio Organico scalato sulla deviazione dal pH ottimale di 6.5)
     ph_deviation = np.abs(df['Soil_pH'] - 6.5)
-    df['Soil_Health'] = df['Organic_Carbon'] / (ph_deviation + 1e-5)
+    df['Soil_Health'] = np.log1p(df['Organic_Carbon'] / (ph_deviation + 1e-5))
 
     # Water Deficit (Rapporto tra domanda atmosferica e umidità reale del suolo)
     df['Water_Deficit'] = evap_proxy / (df['Soil_Moisture'] + 1e-5)
@@ -74,6 +74,7 @@ def get_pipeline_transformer():
         'Temperature_C', 'Humidity', 'Sunlight_Hours', 
         'Wind_Speed_kmh', 'Field_Area_hectare',
         'Total_water_input', 'Thermal_impact',
+        'Soil_Health', 'Water_Deficit'
         # 'Rainfall_mm', 'Previous_Irrigation_mm', 'Evaporation_proxy'
     ]
 

@@ -23,8 +23,8 @@ import pandas as pd
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 def main():
-    USE_BIG_DATA = False
-    FORCE_RETRAIN = False  # Set to True to ignore saved models and retrain from scratch
+    USE_BIG_DATA = True
+    FORCE_RETRAIN = True  # Set to True to ignore saved models and retrain from scratch
 
     dataset_path = os.path.join("data", "train.csv")
 
@@ -136,17 +136,17 @@ def main():
         plot_decision_boundaries_2d(
             X_train_processed,
             y_train,
-            model_name="K-NN (K=31)",
+            model_name=f"K-NN (K={best_knn.n_neighbors})",
             model_type="knn",
-            knn_k=31,
+            knn_k=best_knn.n_neighbors,
             big_data=USE_BIG_DATA,
         )
         plot_decision_boundaries_2d(
             X_train_processed,
             y_train,
-            model_name="RBF SVM (C=10)",
+            model_name=f"RBF SVM (C={best_svm.C})",
             model_type="svm_rbf",
-            svm_c=10.0,
+            svm_c=best_svm.C,
             big_data=USE_BIG_DATA,
         )
     else:
@@ -155,7 +155,7 @@ def main():
             y_train,
             model_name="LINEAR SVM",
             model_type="linear_svm",
-            svm_c=1.0,
+            svm_c=best_svm.C,
             big_data=USE_BIG_DATA,
         )
 

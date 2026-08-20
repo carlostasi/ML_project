@@ -38,7 +38,8 @@ def plot_decision_boundaries_2d(
     knn_k=31,
     svm_c=10.0,
     output_dir="results_notebook",
-    big_data=False
+    big_data=False,
+    random_state=42,
 ):
     print_log(f"Loading decision boundary plot for: {model_name}")
     pca = PCA(n_components=2, random_state=42)
@@ -73,8 +74,9 @@ def plot_decision_boundaries_2d(
     plt.pcolormesh(xx, yy, Z, cmap=cmap_light, shading="auto")
 
     # Sovrappone i punti reali del dataset (ne stampiamo un subset per non affollare il grafico)
+    rng = np.random.RandomState(random_state)
     subset_size = min(2000, len(X_train_pca))
-    indices = np.random.choice(len(X_train_pca), subset_size, replace=False)
+    indices = rng.choice(len(X_train_pca), subset_size, replace=False)
 
     target_names = ["Low", "Medium", "High"]
     for class_idx, color in enumerate(cmap_bold):

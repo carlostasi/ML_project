@@ -53,7 +53,7 @@ def run_random_forest(X_train, y_train):
         'min_samples_leaf': [1, 2, 4],
         
     }
-    rf = RandomForestClassifier(class_weight='balanced', random_state=42, n_jobs=-1)
+    rf = RandomForestClassifier(class_weight='balanced', random_state=42)
     grid_search = GridSearchCV(rf, param_grid, cv=3, scoring='f1_macro', n_jobs=-1, verbose=3)
     grid_search.fit(X_train, y_train)
     
@@ -62,7 +62,7 @@ def run_random_forest(X_train, y_train):
     return grid_search.best_estimator_, grid_search.cv_results_
 
 def run_xgboost(X_train, y_train):
-    xgb = XGBClassifier(n_estimators=100, random_state=42, n_jobs=-1, eval_metric='mlogloss')
+    xgb = XGBClassifier(n_estimators=100, random_state=42, eval_metric='mlogloss')
     param_grid = {
         'n_estimators': [100, 150, 200],  # Numero di alberi sequenziali da costruire
         'max_depth': [4, 6],              # Profondità massima dell'albero (più è alto, più rischia overfitting)
