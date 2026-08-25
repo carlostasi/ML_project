@@ -9,25 +9,9 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import classification_report, f1_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
-from src.utils import print_log
+from src.utils import print_log, get_model_folder_from_name, get_model_folder_from_model
 import matplotlib
 matplotlib.use('Agg')
-
-def get_model_folder_from_name(model_name):
-    name = model_name.lower()
-    if 'knn' in name or 'k-nn' in name: return 'KNN'
-    if 'svm' in name: return 'SVM'
-    if 'random forest' in name or 'rf' in name: return 'RandomForest'
-    if 'xgboost' in name: return 'XGBoost'
-    return ''
-
-def get_model_folder(model):
-    name = type(model).__name__.lower()
-    if 'xgb' in name: return 'XGBoost'
-    if 'randomforest' in name: return 'RandomForest'
-    if 'svc' in name: return 'SVM'
-    if 'neighbors' in name: return 'KNN'
-    return ''
 
 
 def plot_decision_boundaries_2d(
@@ -35,8 +19,8 @@ def plot_decision_boundaries_2d(
     y_train,
     model_name,
     model_type,
-    knn_k=31,
-    svm_c=10.0,
+    knn_k,
+    svm_c,
     output_dir="results_notebook",
     big_data=False,
     random_state=42,
@@ -204,7 +188,7 @@ def plot_feature_importance(
     plt.gca().invert_yaxis()
     plt.tight_layout()
 
-    folder = get_model_folder(model)
+    folder = get_model_folder_from_model(model)
     final_output_dir = os.path.join(output_dir, folder) if folder else output_dir
     os.makedirs(final_output_dir, exist_ok=True)
 
@@ -276,7 +260,7 @@ def plot_multiclass_roc(
     plt.grid(True, linestyle="--", alpha=0.5)
     plt.tight_layout()
 
-    folder = get_model_folder(model)
+    folder = get_model_folder_from_model(model)
     final_output_dir = os.path.join(output_dir, folder) if folder else output_dir
     os.makedirs(final_output_dir, exist_ok=True)
 

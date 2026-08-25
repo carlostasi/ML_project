@@ -2,20 +2,9 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix, f1_score, accuracy_score, recall_score, precision_score
+from src.utils import get_model_folder_from_name
 import matplotlib
 matplotlib.use('Agg')
-
-def get_model_folder(model_name):
-    name = model_name.lower()
-    if 'knn' in name or 'k-nn' in name:
-        return 'KNN'
-    elif 'svm' in name:
-        return 'SVM'
-    elif 'random forest' in name or 'rf' in name:
-        return 'RandomForest'
-    elif 'xgboost' in name:
-        return 'XGBoost'
-    return ''
 
 def evaluate_model(model, X_test, y_test, model_name="Model"):
     """
@@ -60,7 +49,7 @@ def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="r
     plt.xlabel("Predicted label")
     plt.tight_layout()
 
-    folder = get_model_folder(model_name)
+    folder = get_model_folder_from_name(model_name)
     final_output_dir = os.path.join(output_dir, folder) if folder else output_dir
     os.makedirs(final_output_dir, exist_ok=True)
     if big_data:

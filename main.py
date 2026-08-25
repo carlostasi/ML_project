@@ -23,7 +23,7 @@ import pandas as pd
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 def main():
-    USE_BIG_DATA = True
+    USE_BIG_DATA = False
     FORCE_RETRAIN = True  # Set to True to ignore saved models and retrain from scratch
 
     dataset_path = os.path.join("data", "train.csv")

@@ -43,8 +43,6 @@ def features_engineering(df):
     Trying to create new features based on climatic logic 
     to help the models to converge faster
     """ 
-    # Total water stored in the terrain
-    df['Total_water_input'] = df['Rainfall_mm'] + df['Previous_Irrigation_mm']
     # Evaportaion risk index
     # df['Evaporation_proxy'] = df['Temperature_C'] / (df['Humidity'] + 1e-5)
     evap_proxy = df['Temperature_C'] / (df['Humidity'] + 1e-5)
@@ -58,9 +56,6 @@ def features_engineering(df):
     # Water Deficit (Rapporto tra domanda atmosferica e umidità reale del suolo)
     df['Water_Deficit'] = evap_proxy / (df['Soil_Moisture'] + 1e-5)
 
-    cols_to_drop = ['Rainfall_mm', 'Previous_Irrigation_mm']
-    df = df.drop(columns=cols_to_drop)
-
     return df
 
 
@@ -73,9 +68,10 @@ def get_pipeline_transformer():
         'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 
         'Temperature_C', 'Humidity', 'Sunlight_Hours', 
         'Wind_Speed_kmh', 'Field_Area_hectare',
-        'Total_water_input', 'Thermal_impact',
-        'Soil_Health', 'Water_Deficit'
-        # 'Rainfall_mm', 'Previous_Irrigation_mm', 'Evaporation_proxy'
+        'Thermal_impact',
+        'Soil_Health', 'Water_Deficit',
+        'Rainfall_mm', 'Previous_Irrigation_mm'
+        # , 'Evaporation_proxy'
     ]
 
     categorical_cols = [
