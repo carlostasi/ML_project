@@ -5,7 +5,16 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-def load_data(file_path, sample_size_per_class):
+def load_data(file_path):
+    """
+    Load the raw dataset and apply feature engineering.
+
+    No class balancing happens here: the whole dataset is returned with its
+    natural class distribution, so that the train/test split downstream can
+    carve out a test set that is representative of the real population.
+    Balancing is applied to the training partition only, by
+    balance_training_set.
+    """
     df = pd.read_csv(file_path)
 
     if 'id' in df.columns:
@@ -14,29 +23,44 @@ def load_data(file_path, sample_size_per_class):
     df = features_engineering(df)
     target_col = "Irrigation_Need"
 
-    if sample_size_per_class is None:
-        # Big Data here (whole dataset)
-        X = df.drop(columns=[target_col])
-        y = df[target_col]
-        return X, y
-
-    # Trying to balance here
-    classes = df[target_col].unique()
-    sampled_dfs = []
-
-    for cls in classes:
-        df_cls = df[df[target_col] == cls]
-        n_samples = min(sample_size_per_class, len(df_cls))
-        df_sampled_cls = df_cls.sample(n=n_samples, random_state=42)
-        sampled_dfs.append(df_sampled_cls)
-
-    # Here we unify and randomize the balanced dataset
-    df_balanced = pd.concat(sampled_dfs).sample(frac=1, random_state=42).reset_index(drop=True)
-
-    X = df_balanced.drop(columns=[target_col])
-    y = df_balanced[target_col]
+    X = df.drop(columns=[target_col])
+    y = df[target_col]
 
     return X, y
+
+
+def balance_training_set(X_train, y_train, sample_size_per_class, random_state=42):
+    """
+    Draw a class-balanced subsample of the TRAINING partition only.
+
+    This must never be applied before the train/test split: balancing the whole
+    dataset first would also balance the test set, and the resulting metrics
+    would be measured on an artificial 1:1:1 distribution that does not exist in
+    the field. Keeping the split first means every model is scored on the same
+    test set, drawn from the real class distribution, whichever arena it was
+    trained in.
+
+    The per-class size is capped by the rarest class available in the training
+    partition, so the requested sample_size_per_class acts as an upper bound.
+    """
+    counts = y_train.value_counts()
+    n_per_class = min(sample_size_per_class, int(counts.min()))
+
+    sampled_index = []
+    for cls in sorted(y_train.unique()):
+        cls_index = y_train.index[y_train == cls]
+        sampled_index.append(
+            pd.Series(cls_index).sample(n=n_per_class, random_state=random_state)
+        )
+
+    # Unify and shuffle, so that the class blocks are not left in order
+    balanced_index = (
+        pd.concat(sampled_index)
+        .sample(frac=1, random_state=random_state)
+        .to_numpy()
+    )
+
+    return X_train.loc[balanced_index], y_train.loc[balanced_index]
 
 def features_engineering(df):
     """

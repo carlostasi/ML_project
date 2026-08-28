@@ -1,5 +1,10 @@
 import os
-from src.data.preprocessing import load_data, get_pipeline_transformer, dataset_setup
+from src.data.preprocessing import (
+    load_data,
+    balance_training_set,
+    get_pipeline_transformer,
+    dataset_setup,
+)
 from src.models import (
     run_svm,
     run_knn,
@@ -25,6 +30,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 def main():
     USE_BIG_DATA = False
     FORCE_RETRAIN = True  # Set to True to ignore saved models and retrain from scratch
+    SAMPLE_PER_CLASS = 21000  # Upper bound per class in the balanced arena
 
     dataset_path = os.path.join("data", "train.csv")
 
@@ -33,13 +39,33 @@ def main():
         return
 
     print_log("=== PHASE 1: Loading data & Feature Engineering ===")
-    sample_size = None if USE_BIG_DATA else 21000
-    X, y = load_data(dataset_path, sample_size_per_class=sample_size)
+    X, y = load_data(dataset_path)
     print_log(f"Dataset ready. Rows: {X.shape[0]}, Columns: {X.shape[1]}")
     # print("Colonne effettive in X:", X.columns.tolist())
 
     print_log("=== PHASE 2: Split and Preprocessing ===")
+    # Split BEFORE any balancing, so the test set keeps the natural class
+    # distribution and is identical across the two arenas: whatever the training
+    # regime, every model is scored on the same, representative test set.
     X_train, X_test, y_train, y_test = dataset_setup(X, y)
+    test_shares = (y_test.value_counts(normalize=True).sort_index() * 100).round(2)
+    print_log(
+        f"Common test set: {X_test.shape[0]} rows "
+        f"(Low {test_shares[0]}%, Medium {test_shares[1]}%, High {test_shares[2]}%)"
+    )
+
+    if USE_BIG_DATA:
+        print_log(f"Arena: FULL DATA. Training rows: {X_train.shape[0]}")
+    else:
+        X_train, y_train = balance_training_set(
+            X_train, y_train, sample_size_per_class=SAMPLE_PER_CLASS
+        )
+        per_class = int(y_train.value_counts().min())
+        print_log(
+            f"Arena: BALANCED. Training rows: {X_train.shape[0]} "
+            f"({per_class} per class, capped by the rarest class in the training split)"
+        )
+
     plot_correlation_matrix(X_train, big_data=USE_BIG_DATA)
 
     transformer = get_pipeline_transformer()
