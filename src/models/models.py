@@ -1,4 +1,6 @@
 from sklearn.utils import compute_sample_weight
+from sklearn.dummy import DummyClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC, LinearSVC
 from sklearn.ensemble import RandomForestClassifier
@@ -87,3 +89,49 @@ def run_xgboost(X_train, y_train):
     return grid_search.best_estimator_, grid_search.cv_results_
 
 
+
+
+# --- Baselines -------------------------------------------------------------
+# Both are deliberately left un-tuned: their job is to put the headline score of
+# the four tuned models in context, so a GridSearchCV here would defeat the
+# purpose. They return (estimator, None) to match the (best_estimator_,
+# cv_results_) signature of the run_<model> functions above.
+
+def run_majority_baseline(X_train, y_train):
+    """
+    Lower bound: always predict the majority class ('Low', 58.72% of the test
+    set). It never detects a drought at all, so it fixes the floor against
+    which recall on 'High' has to be read.
+    """
+    model = DummyClassifier(strategy='most_frequent')
+    model.fit(X_train, y_train)
+    print("\n >>> Majority-class baseline fitted (no tuning by design).\n")
+    return model, None
+
+
+def run_decision_tree(X_train, y_train, max_depth=8, class_weight=None):
+    """
+    Interpretable reference: a single axis-aligned tree. Depth 8 is where the
+    depth sweep in src/experiments/threshold_rule.py peaks on the full-data
+    arena, and at that depth this tree matches the 300-tree Random Forest on
+    macro F1 (0.9682 both) while being four orders of magnitude smaller — the
+    central result of the project. On the balanced subsample the sweep peaks
+    one level earlier, at depth 6 (0.9407 against 0.9387 at depth 8), 50k rows
+    being too few to resolve the deeper splits; depth 8 is kept as the default
+    so the baseline is the same model in both arenas and stays comparable.
+
+    class_weight is left at None on purpose, unlike Random Forest and XGBoost.
+    The baseline is meant to be the plainest possible tree, and weighting it
+    would make it a design choice rather than a reference point. The weighting
+    is not free either: measured on the full-data arena it trades macro F1 for
+    recall on the minority class (0.9682 -> 0.9606 macro F1, 0.9074 -> 0.9262
+    recall on 'High'). In the balanced arena it changes nothing, the training
+    subsample already being 1:1:1.
+    """
+    model = DecisionTreeClassifier(
+        max_depth=max_depth, class_weight=class_weight, random_state=42
+    )
+    model.fit(X_train, y_train)
+    print(f"\n >>> Decision Tree baseline fitted (max_depth={max_depth}, "
+          f"{model.get_n_leaves()} leaves, no tuning by design).\n")
+    return model, None

@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-def load_data(file_path):
+def load_data(file_path, keep_evaporation_proxy=False):
     """
     Load the raw dataset and apply feature engineering.
 
@@ -20,7 +20,7 @@ def load_data(file_path):
     if 'id' in df.columns:
         df = df.drop(columns=['id'])
 
-    df = features_engineering(df)
+    df = features_engineering(df, keep_evaporation_proxy=keep_evaporation_proxy)
     target_col = "Irrigation_Need"
 
     X = df.drop(columns=[target_col])
@@ -62,14 +62,22 @@ def balance_training_set(X_train, y_train, sample_size_per_class, random_state=4
 
     return X_train.loc[balanced_index], y_train.loc[balanced_index]
 
-def features_engineering(df):
+def features_engineering(df, keep_evaporation_proxy=False):
     """
     Trying to create new features based on climatic logic 
     to help the models to converge faster
+
+    The evaporation proxy E is normally an intermediate term only: it measures
+    thermal moisture extraction and reaches the design matrix through
+    Water_Deficit, so atmospheric demand is represented once, in the ratio form
+    that is agronomically meaningful. keep_evaporation_proxy=True retains it as
+    a column of its own instead, which is the ablation the report promises in
+    its feature-engineering section; see src/experiments/feature_ablation.py.
     """ 
     # Evaportaion risk index
-    # df['Evaporation_proxy'] = df['Temperature_C'] / (df['Humidity'] + 1e-5)
     evap_proxy = df['Temperature_C'] / (df['Humidity'] + 1e-5)
+    if keep_evaporation_proxy:
+        df['Evaporation_proxy'] = evap_proxy
     # Daily thermo impact
     df['Thermal_impact'] = df['Temperature_C'] * df['Sunlight_Hours']
 
@@ -83,10 +91,17 @@ def features_engineering(df):
     return df
 
 
-def get_pipeline_transformer():
+def get_pipeline_transformer(drop_numeric=None, add_numeric=None):
     """
     Define trasnformer pipeline for numerical and categorial columns.
     Apply One-Hot Ecncoding and Feature Scaling.
+
+    drop_numeric and add_numeric exist for the feature ablation in
+    src/experiments/feature_ablation.py and both default to no change, so every
+    existing caller keeps the original 38-dimensional encoding. drop_numeric
+    removes named continuous columns (used to take out the engineered terms one
+    at a time); add_numeric appends columns that features_engineering only
+    produces on request, currently just Evaporation_proxy.
     """
     numerical_cols = [
         'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 
@@ -103,6 +118,15 @@ def get_pipeline_transformer():
         'Irrigation_Type', 'Water_Source', 'Mulching_Used', 'Region'
     ]
     
+    if drop_numeric:
+        missing = set(drop_numeric) - set(numerical_cols)
+        if missing:
+            raise ValueError(f"drop_numeric names unknown columns: {sorted(missing)}")
+        numerical_cols = [c for c in numerical_cols if c not in drop_numeric]
+
+    if add_numeric:
+        numerical_cols = numerical_cols + [c for c in add_numeric if c not in numerical_cols]
+
     # Construction of ColumnTransformer
     preprocessor = ColumnTransformer(
         transformers=[

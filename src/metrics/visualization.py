@@ -1,13 +1,11 @@
-from sklearn.metrics import accuracy_score, recall_score, precision_score
-from sklearn.svm import SVC, LinearSVC
 import os
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from sklearn.base import clone
 from sklearn.decomposition import PCA
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import classification_report, f1_score, roc_curve, auc
+from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import label_binarize
 from src.utils import print_log, get_model_folder_from_name, get_model_folder_from_model
 import matplotlib
@@ -17,27 +15,36 @@ matplotlib.use('Agg')
 def plot_decision_boundaries_2d(
     X_train,
     y_train,
+    tuned_model,
     model_name,
     model_type,
-    knn_k,
-    svm_c,
     output_dir="results_notebook",
     big_data=False,
     random_state=42,
 ):
+    """
+    Draw a 2D decision boundary for the family of the tuned estimator.
+
+    The estimator is duplicated from the tuned one with sklearn's clone, which
+    copies every hyperparameter and returns an unfitted object. Rebuilding it
+    from individually passed settings, as this function used to do, meant the
+    plot could silently disagree with the model it claimed to show: it hardcoded
+    gamma="scale" while the selected RBF SVM uses gamma='auto'. Cloning removes
+    that whole class of drift, for every hyperparameter, permanently.
+
+    What cloning cannot fix is that the plotted model is refitted on two
+    principal components while the evaluated one sees all 38 features. This is
+    a picture of how the model family carves up a projection of the space, not
+    of the boundary any reported score was measured on, and the title says so.
+    """
     print_log(f"Loading decision boundary plot for: {model_name}")
     pca = PCA(n_components=2, random_state=42)
     X_train_pca = pca.fit_transform(X_train)
 
-    if model_type == "knn":
-        model = KNeighborsClassifier(n_neighbors=knn_k)
-    elif model_type == "svm_rbf":
-        model = SVC(kernel="rbf", C=svm_c, gamma="scale", random_state=42)
-    elif model_type == "linear_svm":
-        model = LinearSVC(C=svm_c, dual=False, class_weight="balanced", random_state=42)
-    else:
-        raise ValueError("Model not supported for plot generation.")
+    if tuned_model is None:
+        raise ValueError("A fitted, tuned estimator is required to plot its boundary.")
 
+    model = clone(tuned_model)
     model.fit(X_train_pca, y_train)
 
     x_min, x_max = X_train_pca[:, 0].min() - 0.5, X_train_pca[:, 0].max() + 0.5
@@ -79,7 +86,11 @@ def plot_decision_boundaries_2d(
             alpha=0.7,
         )
 
-    plt.title(f"Decision boundary 2D (PCA 2D) - {model_name}")
+    plt.title(
+        f"Decision boundary - {model_name}\n"
+        "refitted on 2 principal components, not the evaluated 38-feature model",
+        fontsize=11,
+    )
     plt.xlabel("Principal Component 1 (PC1)")
     plt.ylabel("Principal component 2 (PC2)")
     plt.legend(loc="upper right", title="Real classes")
@@ -94,38 +105,6 @@ def plot_decision_boundaries_2d(
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"Plot saved with success in: {filepath}")
-
-
-def run_knn_with_pca_experiment(
-    X_train, y_train, X_test, y_test, n_neighbors=31, n_components=3
-):
-
-    print(f"\n=== Esperiment: PCA (Dim={n_components}) + K-NN (K={n_neighbors}) ===")
-
-    pca = PCA(n_components=n_components, random_state=42)
-    X_train_pca = pca.fit_transform(X_train)
-    X_test_pca = pca.transform(X_test)
-
-    variance_explained = np.sum(pca.explained_variance_ratio_) * 100
-    print(
-        f" -> Total Variance explained by the {n_components} components: {variance_explained:.2f}%"
-    )
-
-    knn_pca = KNeighborsClassifier(n_neighbors=n_neighbors)
-
-    knn_pca.fit(X_train_pca, y_train)
-    y_pred = knn_pca.predict(X_test_pca)
-
-    macro_f1 = f1_score(y_test, y_pred, average="macro")
-
-    print("\n--- Performance Report (PCA + K-NN) ---")
-    print(classification_report(y_test, y_pred, target_names=["Low", "Medium", "High"]))
-    print(f"Global Macro F1-Score: {macro_f1:.4f}")
-    accuracy = accuracy_score(y_test, y_pred)
-    recall = recall_score(y_test, y_pred, average="macro")
-    precision = precision_score(y_test, y_pred, average="macro")
-
-    return macro_f1
 
 
 def plot_correlation_matrix(df, output_dir="results_notebook", big_data=False):

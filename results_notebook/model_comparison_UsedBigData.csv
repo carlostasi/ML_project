@@ -1,4 +1,6 @@
 Model_name,F1-Score,Accuracy,Recall,Precision
-Linear SVM,0.7539,0.8754,0.7158,0.8446
-Random Forest,0.9657,0.9843,0.9558,0.9764
-XGBoost,0.9522,0.9807,0.9652,0.9407
+Majority baseline,0.2466,0.5872,0.3333,0.1957
+Decision Tree (d=8),0.9682,0.9850,0.9595,0.9776
+Linear SVM,0.7536,0.8754,0.7156,0.8439
+Random Forest,0.9682,0.9850,0.9601,0.9767
+XGBoost,0.9560,0.9817,0.9671,0.9460

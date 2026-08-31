@@ -10,15 +10,21 @@ from src.models import (
     run_knn,
     run_xgboost,
     run_random_forest,
+    run_majority_baseline,
+    run_decision_tree,
     save_model,
     load_model,
     model_exists,
+)
+from src.experiments import (
+    run_threshold_rule_experiment,
+    run_feature_ablation,
+    run_pca_knn_experiment,
 )
 from src.metrics import (
     evaluate_model,
     plot_save_confusion_matrix,
     plot_decision_boundaries_2d,
-    run_knn_with_pca_experiment,
     plot_correlation_matrix,
     plot_feature_importance,
     plot_multiclass_roc,
@@ -28,8 +34,8 @@ import pandas as pd
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 def main():
-    USE_BIG_DATA = False
-    FORCE_RETRAIN = True  # Set to True to ignore saved models and retrain from scratch
+    USE_BIG_DATA = True
+    FORCE_RETRAIN = False  # Set to True to ignore saved models and retrain from scratch
     SAMPLE_PER_CLASS = 21000  # Upper bound per class in the balanced arena
 
     dataset_path = os.path.join("data", "train.csv")
@@ -76,6 +82,19 @@ def main():
     )
 
     print_log("=== PHASE 3: Training and tuning models ===")
+
+    # --- Baselines ---
+    # Trained first and evaluated alongside the tuned models, so the headline
+    # score is never reported without a floor (majority class) and an
+    # interpretable reference (a single tree) next to it.
+    print("\n" + "=" * 50)
+    print("BASELINES")
+    print("=" * 50)
+    best_majority, _ = run_majority_baseline(X_train_processed, y_train)
+    save_model(best_majority, "majority_baseline", use_big_data=USE_BIG_DATA)
+    best_tree, _ = run_decision_tree(X_train_processed, y_train, max_depth=8)
+    save_model(best_tree, "decision_tree", use_big_data=USE_BIG_DATA)
+
     fast_svm_mode = True if USE_BIG_DATA else False
     svm_model_name = "linear_svm" if fast_svm_mode else "rbf_svm"
 
@@ -141,6 +160,8 @@ def main():
     all_metrics = []
     svm_label = "Linear SVM" if fast_svm_mode else "RBF SVM"
     models_to_evaluate = [
+        (best_majority, "Majority baseline"),
+        (best_tree, "Decision Tree (d=8)"),
         (best_knn, "K-NN"),
         (best_svm, svm_label),
         (best_rf, "Random Forest"),
@@ -158,44 +179,61 @@ def main():
             )
     print_log("=== PHASE 5: Generation of decision boundaries plots (PCA 2D) === ")
 
+    # The tuned estimator itself is passed, not its settings: plot_decision_boundaries_2d
+    # clones it, so the plotted model can never disagree with the evaluated one on any
+    # hyperparameter.
     if not USE_BIG_DATA:
         plot_decision_boundaries_2d(
             X_train_processed,
             y_train,
+            tuned_model=best_knn,
             model_name=f"K-NN (K={best_knn.n_neighbors})",
             model_type="knn",
-            knn_k=best_knn.n_neighbors,
             big_data=USE_BIG_DATA,
         )
         plot_decision_boundaries_2d(
             X_train_processed,
             y_train,
-            model_name=f"RBF SVM (C={best_svm.C})",
+            tuned_model=best_svm,
+            model_name=f"RBF SVM (C={best_svm.C}, gamma={best_svm.gamma})",
             model_type="svm_rbf",
-            svm_c=best_svm.C,
             big_data=USE_BIG_DATA,
         )
     else:
         plot_decision_boundaries_2d(
             X_train_processed,
             y_train,
-            model_name="LINEAR SVM",
+            tuned_model=best_svm,
+            model_name=f"Linear SVM (C={best_svm.C})",
             model_type="linear_svm",
-            svm_c=best_svm.C,
             big_data=USE_BIG_DATA,
         )
 
-    print("\n=== Run experiment (PCA + K-NN) ===")
-    # Lanciamo il test riducendo lo spazio a 3 componenti principali per vedere l'effetto sul K-NN
-    if not USE_BIG_DATA:
-        run_knn_with_pca_experiment(
-            X_train_processed,
-            y_train,
-            X_test_processed,
-            y_test,
-            n_neighbors=31,
-            n_components=3,
-        )
+    print_log("=== PHASE 5b: Threshold-rule experiment ===")
+    run_threshold_rule_experiment(
+        X_train_processed,
+        y_train,
+        X_test_processed,
+        y_test,
+        transformer=transformer,
+        big_data=USE_BIG_DATA,
+    )
+
+    print_log("=== PHASE 5c: Feature-engineering ablation ===")
+    run_feature_ablation(
+        dataset_path,
+        big_data=USE_BIG_DATA,
+        sample_per_class=SAMPLE_PER_CLASS,
+    )
+
+    print_log("=== PHASE 5d: PCA + K-NN dimensionality sweep ===")
+    run_pca_knn_experiment(
+        X_train_processed,
+        y_train,
+        X_test_processed,
+        y_test,
+        big_data=USE_BIG_DATA,
+    )
 
     print_log("=== PHASE 6: ROC Curve ===")
 
@@ -224,12 +262,19 @@ def main():
                 big_data=USE_BIG_DATA
             )
     metrics_df = pd.DataFrame(all_metrics)
+    suffix = "_UsedBigData" if USE_BIG_DATA else ""
+
+    # model_comparison.csv keeps its original macro-only schema, so anything
+    # already pointing at it does not break; the per-class breakdown, including
+    # recall on the minority 'High' class, goes to its own file.
+    macro_cols = ["Model_name", "F1-Score", "Accuracy", "Recall", "Precision"]
+    metrics_df[macro_cols].to_csv(
+        f"results_notebook/model_comparison{suffix}.csv",
+        index=False,
+        float_format="%.4f",
+    )
     metrics_df.to_csv(
-        (
-            "results_notebook/model_comparison.csv"
-            if not USE_BIG_DATA
-            else "results_notebook/model_comparison_UsedBigData.csv"
-        ),
+        f"results_notebook/per_class_metrics{suffix}.csv",
         index=False,
         float_format="%.4f",
     )
