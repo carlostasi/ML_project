@@ -1,7 +1,7 @@
 Feature_set,N_features,XGBoost_Macro_F1,XGBoost_High_recall,Tree_Macro_F1,Tree_High_recall,LinearSVM_Macro_F1,LinearSVM_High_recall
-All 38 features (reference),38,0.9484,0.9479,0.9387,0.9329,0.6832,0.9238
-No engineered features,35,0.9497,0.9507,0.9391,0.9329,0.6741,0.9272
-No Thermal_impact,37,0.948,0.9486,0.9385,0.9331,0.6831,0.9243
+All 38 features (reference),38,0.9484,0.9479,0.9387,0.9329,0.6833,0.9238
+No engineered features,35,0.9497,0.9507,0.9391,0.9329,0.6742,0.9272
+No Thermal_impact,37,0.948,0.9486,0.9385,0.9331,0.6832,0.9243
 No Soil_Health,37,0.9486,0.9503,0.9385,0.9331,0.6827,0.9243
 No Water_Deficit,37,0.9473,0.951,0.9387,0.9331,0.6748,0.9269
-Plus standalone E,39,0.9477,0.9486,0.9389,0.9327,0.6847,0.9224
+Plus standalone E,39,0.9477,0.9486,0.9389,0.9327,0.6848,0.9224

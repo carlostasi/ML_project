@@ -1,0 +1,7 @@
+Arm,Reference,Observed_delta,CI95_low,CI95_high,Share_no_harm,Excludes_zero
+Majority baseline,XGBoost,-0.7018,-0.7044,-0.6991,0.0,yes
+Decision Tree (d=8),XGBoost,-0.0097,-0.012,-0.0074,0.0,yes
+K-NN,XGBoost,-0.3033,-0.3068,-0.2997,0.0,yes
+RBF SVM,XGBoost,-0.1081,-0.1115,-0.1048,0.0,yes
+Linear SVM,XGBoost,-0.2652,-0.2688,-0.2615,0.0,yes
+Random Forest,XGBoost,-0.0051,-0.0072,-0.003,0.0,yes

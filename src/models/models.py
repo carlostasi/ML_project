@@ -7,6 +7,9 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV
 
+from src.models.load_store import load_model, model_exists
+
+
 def run_knn(X_train, y_train, bypass=False):
     if bypass:
         print("[INFO] K-NN tuning skipped for RAM limits.")
@@ -97,6 +100,43 @@ def run_xgboost(X_train, y_train):
 # purpose. They return (estimator, None) to match the (best_estimator_,
 # cv_results_) signature of the run_<model> functions above.
 
+def tuned_k(use_big_data=False, default=31):
+    """
+    Read K back from a tuned K-NN, so that no caller has to hardcode it.
+
+    Falls back to the balanced arena when the requested one has no pickle. The
+    full-data arena never runs a grid search over K, so borrowing the value the
+    balanced arena selected keeps the two arenas comparable instead of inventing
+    a number.
+    """
+    if model_exists("knn", use_big_data=use_big_data):
+        return load_model("knn", use_big_data=use_big_data).get_params()["n_neighbors"]
+    if use_big_data and model_exists("knn", use_big_data=False):
+        return load_model("knn", use_big_data=False).get_params()["n_neighbors"]
+    return default
+
+
+def run_knn_fixed(X_train, y_train, n_neighbors):
+    """
+    K-NN at a fixed K, with no search. This is how the full-data arena gets a
+    K-NN at all.
+
+    What the memory wall excludes on that arena is the *tuning*, not the fitting.
+    A grid over ten values of K at cv=3 is thirty passes of the same
+    pairwise-distance computation, each holding its own copy of the data under
+    n_jobs=-1; one pass is affordable. Fitting itself is free — a K-NN stores the
+    training matrix and nothing else — so the whole cost is deferred to
+    prediction, which happens once per evaluation either way.
+
+    Returns (model, None) like the other un-tuned references, and the caller
+    labels it as untuned so no table implies a search that never ran.
+    """
+    model = KNeighborsClassifier(n_neighbors=n_neighbors)
+    model.fit(X_train, y_train)
+    print(f"\n >>> K-NN fitted at K={n_neighbors} (no search: untuned reference).\n")
+    return model, None
+
+
 def run_majority_baseline(X_train, y_train):
     """
     Lower bound: always predict the majority class ('Low', 58.72% of the test
@@ -111,14 +151,19 @@ def run_majority_baseline(X_train, y_train):
 
 def run_decision_tree(X_train, y_train, max_depth=8, class_weight=None):
     """
-    Interpretable reference: a single axis-aligned tree. Depth 8 is where the
-    depth sweep in src/experiments/threshold_rule.py peaks on the full-data
-    arena, and at that depth this tree matches the 300-tree Random Forest on
-    macro F1 (0.9682 both) while being four orders of magnitude smaller — the
-    central result of the project. On the balanced subsample the sweep peaks
-    one level earlier, at depth 6 (0.9407 against 0.9387 at depth 8), 50k rows
-    being too few to resolve the deeper splits; depth 8 is kept as the default
-    so the baseline is the same model in both arenas and stays comparable.
+    Interpretable reference: a single axis-aligned tree, and at the right depth
+    the match for a 300-tree Random Forest on macro F1 while being four orders of
+    magnitude smaller — the central result of the project.
+
+    max_depth is expected to come from select_tree_depth in
+    src/experiments/threshold_rule.py, which picks it by cross-validation on the
+    training partition; main.py passes it explicitly. The default of 8 is only a
+    fallback for a direct call. Earlier versions hardcoded 8 because that is
+    where the depth sweep peaks on the full-data arena, but that sweep is scored
+    on the test set, so using it to choose the depth would have selected a model
+    on the data the same model is then reported against. The selected depth may
+    now differ between arenas, which is expected: the recoverable depth grows
+    with the training sample.
 
     class_weight is left at None on purpose, unlike Random Forest and XGBoost.
     The baseline is meant to be the plainest possible tree, and weighting it

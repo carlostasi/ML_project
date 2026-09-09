@@ -1,0 +1,8 @@
+Rule,Lambda,Threshold,High_precision,High_recall,High_f1,Macro_F1,Predicted_High,Val_cost_per_1000,Test_cost_per_1000,Brier_High
+arg-max (the rule used everywhere else),,,0.8253,0.9479,0.8824,0.9484,4826,,,0.0075
+"expected cost, lambda = 1",1,0.45,0.7970,0.9531,0.8681,0.9431,5025,20.43,9.66,0.0075
+"expected cost, lambda = 2",2,0.25,0.6094,0.9769,0.7506,0.8984,6736,31.53,22.42,0.0075
+"expected cost, lambda = 5",5,0.18,0.5196,0.9833,0.6799,0.8704,7952,51.96,33.1,0.0075
+"expected cost, lambda = 10",10,0.1021,0.4160,0.9883,0.5855,0.8311,9984,74.07,50.17,0.0075
+"expected cost, lambda = 20",20,0.0226,0.2695,0.9967,0.4243,0.7540,15541,94.7,92.33,0.0075
+"expected cost, lambda = 50",50,0.0226,0.2695,0.9967,0.4243,0.7540,15541,124.44,95.66,0.0075

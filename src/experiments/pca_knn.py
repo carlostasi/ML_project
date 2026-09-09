@@ -13,18 +13,17 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, recall_score
 from sklearn.neighbors import KNeighborsClassifier
 
-from src.models import load_model, model_exists
+from src.models import tuned_k
 from src.utils import print_log
 
 matplotlib.use("Agg")
 
-# None means "keep every dimension", i.e. the uncompressed baseline.
+# None means "keep every dimension", i.e. the uncompressed baseline. It runs on
+# both arenas: the full partition used to skip it, on the assumption that an
+# uncompressed K-NN could not be fitted there at all, but a single pass over the
+# test set has since been measured at 42 seconds. What the memory wall excludes
+# on that arena is the grid search, which is thirty such passes run in parallel.
 DEFAULT_COMPONENTS = [2, 3, 5, 10, 20, None]
-
-# The uncompressed arm is the one the RAM wall excludes on the full partition:
-# it is the reason run_knn is skipped there in the first place, so attempting it
-# here would only reproduce that failure at the cost of a very long run.
-BIG_DATA_COMPONENTS = [2, 3, 5, 10, 20]
 
 DEFAULT_NEIGHBOURS = 31
 
@@ -49,10 +48,10 @@ def run_pca_knn_experiment(
     Returns the sweep as a DataFrame.
     """
     if components is None:
-        components = BIG_DATA_COMPONENTS if big_data else DEFAULT_COMPONENTS
+        components = DEFAULT_COMPONENTS
     suffix = "_UsedBigData" if big_data else ""
 
-    n_neighbors = _tuned_neighbours(big_data)
+    n_neighbors = tuned_k(big_data, DEFAULT_NEIGHBOURS)
     print_log(
         f"PCA + K-NN sweep (K={n_neighbors}): does compressing the space rescue K-NN?"
     )
@@ -69,18 +68,6 @@ def run_pca_knn_experiment(
             f"{row['Seconds']:6.1f}s"
         )
 
-    if big_data:
-        # Recorded rather than silently omitted: the absence is itself the result
-        # the report claims in Section 2.2.
-        rows.append({
-            "n_components": "all (38)",
-            "Explained_variance": 100.0,
-            "Macro_F1": float("nan"),
-            "High_recall": float("nan"),
-            "Seconds": float("nan"),
-            "Note": "not run: the uncompressed K-NN is what the memory wall excludes on this arena",
-        })
-        print("  components= all  not run on the full partition (memory wall, see Section 2.2)")
 
     sweep = pd.DataFrame(rows)
     os.makedirs(output_dir, exist_ok=True)
@@ -90,17 +77,6 @@ def run_pca_knn_experiment(
 
     _plot_sweep(sweep, output_dir, suffix, big_data)
     return sweep
-
-
-def _tuned_neighbours(big_data):
-    """Take K from the tuned model when one exists, so the setting cannot drift."""
-    if model_exists("knn", use_big_data=big_data):
-        return load_model("knn", use_big_data=big_data).get_params()["n_neighbors"]
-    if model_exists("knn", use_big_data=False):
-        # The full-data arena never tunes a K-NN; borrowing the balanced arena's K
-        # keeps the two sweeps comparable instead of inventing a value.
-        return load_model("knn", use_big_data=False).get_params()["n_neighbors"]
-    return DEFAULT_NEIGHBOURS
 
 
 def _one_setting(X_train, y_train, X_test, y_test, n, n_neighbors):

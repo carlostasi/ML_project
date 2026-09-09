@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+from sklearn.model_selection import cross_val_score
 from sklearn.tree import DecisionTreeClassifier, export_text
 from sklearn.metrics import f1_score
 
@@ -11,8 +12,50 @@ from src.utils import print_log
 
 matplotlib.use("Agg")
 
+# None is a legitimate depth here (unbounded), so it cannot also mean "not given".
+_UNSET = object()
+
 # None is kept last so it reads as "unbounded" at the right-hand end of the sweep.
 DEFAULT_DEPTHS = [1, 2, 3, 4, 5, 6, 8, 10, 12, None]
+
+
+def select_tree_depth(X_train, y_train, depths=None, cv=3, random_state=42):
+    """
+    Choose the reference tree's depth by cross-validation on the training data.
+
+    The sweep below scores every depth on the test set. For a diagnostic that is
+    the right thing to do -- the shape of the curve is what shows the target has
+    fixed complexity -- but it is the wrong way to pick a model, and the tree
+    reported in the results tables is a model. Its depth therefore comes from
+    here, where no test row is touched, and the sweep keeps its separate role as
+    evidence about the target rather than as a selection procedure.
+
+    Returns (selected_depth, DataFrame of cross-validated scores).
+    """
+    depths = DEFAULT_DEPTHS if depths is None else depths
+
+    print_log(f"Selecting the reference tree's depth by {cv}-fold CV on the training partition")
+
+    rows = []
+    for depth in depths:
+        tree = DecisionTreeClassifier(max_depth=depth, random_state=random_state)
+        scores = cross_val_score(tree, X_train, y_train, cv=cv, scoring="f1_macro")
+        rows.append(
+            {
+                "max_depth": "None" if depth is None else depth,
+                "CV_Macro_F1": round(float(scores.mean()), 4),
+                "CV_std": round(float(scores.std()), 4),
+            }
+        )
+        print(f"  depth={str(depth):>4s}  CV macro F1={scores.mean():.4f} "
+              f"(sd {scores.std():.4f})")
+
+    table = pd.DataFrame(rows)
+    best_label = table.loc[table["CV_Macro_F1"].idxmax(), "max_depth"]
+    selected = None if best_label == "None" else int(best_label)
+    print_log(f"Reference tree depth selected by cross-validation: {best_label}")
+
+    return selected, table
 
 
 def run_threshold_rule_experiment(
@@ -25,6 +68,8 @@ def run_threshold_rule_experiment(
     report_depth=3,
     output_dir="results_notebook",
     big_data=False,
+    cv_table=None,
+    selected_depth=_UNSET,
 ):
     """
     Sweep decision-tree depth, then report the shallow tree's split thresholds.
@@ -34,6 +79,11 @@ def run_threshold_rule_experiment(
     ColumnTransformer: it is optional, and is used only to invert the
     StandardScaler so that the printed thresholds are in agronomic units
     (mm, degrees C, ...) rather than in standard deviations.
+
+    `cv_table` and `selected_depth` come from select_tree_depth. When present the
+    cross-validated curve is written alongside the test curve and the selected
+    depth is marked on the plot, which keeps the distinction visible: one curve
+    selects, the other describes.
 
     Returns the sweep as a DataFrame.
     """
@@ -58,34 +108,53 @@ def run_threshold_rule_experiment(
 
     sweep = pd.DataFrame(rows)
 
+    if cv_table is not None:
+        sweep = sweep.merge(cv_table, on="max_depth", how="left")
+
     os.makedirs(output_dir, exist_ok=True)
     csv_path = os.path.join(output_dir, f"depth_sweep{suffix}.csv")
     sweep.to_csv(csv_path, index=False)
     print(f"Depth sweep saved in: {csv_path}")
 
-    _plot_depth_sweep(sweep, output_dir, suffix, big_data)
+    _plot_depth_sweep(sweep, output_dir, suffix, big_data, selected_depth)
     _print_thresholds(X_train, y_train, transformer, report_depth)
 
     return sweep
 
 
-def _plot_depth_sweep(sweep, output_dir, suffix, big_data):
-    """Plot macro F1 against depth, with the saturation point marked."""
+def _plot_depth_sweep(sweep, output_dir, suffix, big_data, selected_depth=_UNSET):
+    """Plot macro F1 against depth: the test curve, and the CV curve that selects."""
     labels = sweep["max_depth"].astype(str).tolist()
     scores = sweep["Macro_F1"].tolist()
     positions = range(len(labels))
 
-    best_idx = int(np.argmax(scores))
-
     plt.figure(figsize=(9, 5.5))
-    plt.plot(positions, scores, marker="o", color="teal", lw=2)
-    plt.scatter([best_idx], [scores[best_idx]], s=160, facecolors="none",
-                edgecolors="crimson", lw=2, zorder=5,
-                label=f"saturation: depth {labels[best_idx]} (F1 = {scores[best_idx]:.4f})")
+    plt.plot(positions, scores, marker="o", color="teal", lw=2,
+             label="Macro F1 (common test set)")
+
+    if "CV_Macro_F1" in sweep.columns and sweep["CV_Macro_F1"].notna().any():
+        plt.plot(positions, sweep["CV_Macro_F1"].tolist(), marker="s", lw=1.5,
+                 color="#A8642A", linestyle=":",
+                 label="Macro F1 (3-fold CV on training)")
+
+    mark_label = None
+    if selected_depth is not _UNSET:
+        candidate = "None" if selected_depth is None else str(selected_depth)
+        if candidate in labels:
+            mark_label = candidate
+
+    if mark_label is not None:
+        idx = labels.index(mark_label)
+        note = f"depth selected by CV: {mark_label} (test F1 = {scores[idx]:.4f})"
+    else:
+        idx = int(np.argmax(scores))
+        note = f"peak: depth {labels[idx]} (F1 = {scores[idx]:.4f})"
+    plt.scatter([idx], [scores[idx]], s=160, facecolors="none",
+                edgecolors="crimson", lw=2, zorder=5, label=note)
 
     plt.xticks(list(positions), labels)
     plt.xlabel("Tree max_depth")
-    plt.ylabel("Macro F1-Score (common test set)")
+    plt.ylabel("Macro F1-Score")
     arena = "Entire dataset" if big_data else "Balanced subsample"
     plt.title(f"A single decision tree is enough - depth sweep ({arena})", fontsize=12, pad=15)
     plt.grid(True, linestyle="--", alpha=0.5)

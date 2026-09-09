@@ -14,6 +14,7 @@ from src.data.preprocessing import (
     dataset_setup,
     get_pipeline_transformer,
 )
+from src.experiments.paired_bootstrap import run_paired_bootstrap
 from src.models import load_model, model_exists
 from src.utils import print_log
 
@@ -118,80 +119,14 @@ def run_feature_ablation(
     table.to_csv(path, index=False)
     print(f"Feature ablation saved in: {path}")
 
-    run_paired_bootstrap(truth, linear_predictions, suffix=suffix, output_dir=output_dir)
+    run_paired_bootstrap(
+        truth,
+        linear_predictions,
+        suffix=suffix,
+        output_dir=output_dir,
+        filename="feature_ablation_bootstrap",
+    )
     return table
-
-
-def run_paired_bootstrap(y_true, predictions, n_resamples=10000, suffix="",
-                         output_dir="results_notebook", random_state=42):
-    labels = list(predictions)
-    if len(labels) < 2 or y_true is None:
-        return None
-
-    rng = np.random.default_rng(random_state)
-    truth = np.asarray(y_true, dtype=np.int8)
-    reference_label = labels[0]
-    reference = predictions[reference_label]
-    n = truth.shape[0]
-
-    print_log(f"Paired bootstrap on the Linear SVM arms ({n_resamples} resamples)")
-
-    rows = []
-    for label in labels[1:]:
-        arm = predictions[label]
-
-        # One row -> one of 27 cells, indexed as 9*true + 3*reference + arm.
-        cells = np.bincount(9 * truth + 3 * reference + arm, minlength=27)
-        draws = rng.multinomial(n, cells / n, size=n_resamples).reshape(-1, 3, 3, 3)
-
-        f1_reference = _macro_f1_from_cm(draws.sum(axis=3))   # sum out the arm axis
-        f1_arm = _macro_f1_from_cm(draws.sum(axis=2))         # sum out the reference axis
-        deltas = f1_arm - f1_reference
-
-        observed = (_macro_f1_from_cm(cells.reshape(1, 3, 3, 3).sum(axis=2))
-                    - _macro_f1_from_cm(cells.reshape(1, 3, 3, 3).sum(axis=3)))[0]
-        low, high = np.percentile(deltas, [2.5, 97.5])
-        # Share of resamples in which removing the feature did not hurt at all.
-        share_no_harm = float((deltas >= 0).mean())
-
-        rows.append({
-            "Feature_set": label,
-            "Observed_delta": round(float(observed), 4),
-            "CI95_low": round(float(low), 4),
-            "CI95_high": round(float(high), 4),
-            "Share_no_harm": round(share_no_harm, 4),
-            "Excludes_zero": "yes" if low > 0 or high < 0 else "no",
-        })
-        print(f"  {label:30s} delta={observed:+.4f}  "
-              f"95% CI [{low:+.4f}, {high:+.4f}]  "
-              f"{'distinguishable from zero' if (low > 0 or high < 0) else 'NOT distinguishable from zero'}")
-
-    table = pd.DataFrame(rows)
-    path = os.path.join(output_dir, f"feature_ablation_bootstrap{suffix}.csv")
-    table.to_csv(path, index=False)
-    print(f"Bootstrap saved in: {path}")
-    return table
-
-
-def _macro_f1_from_cm(cm):
-    """
-    Macro F1 from a stack of confusion matrices, shaped (samples, true, pred).
-
-    Working from the confusion matrix rather than from label vectors is what
-    makes the bootstrap cheap: the resampled matrices come straight out of the
-    multinomial draw, and no per-row comparison is ever repeated.
-    """
-    cm = cm.astype(np.float64)
-    tp = np.einsum("bcc->bc", cm)
-    predicted = cm.sum(axis=1)
-    actual = cm.sum(axis=2)
-
-    with np.errstate(divide="ignore", invalid="ignore"):
-        precision = np.where(predicted > 0, tp / predicted, 0.0)
-        recall = np.where(actual > 0, tp / actual, 0.0)
-        denominator = precision + recall
-        f1 = np.where(denominator > 0, 2 * precision * recall / denominator, 0.0)
-    return f1.mean(axis=1)
 
 
 def _arm_models(xgb_params, svm_c):

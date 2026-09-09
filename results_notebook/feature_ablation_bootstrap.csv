@@ -1,6 +1,6 @@
-Feature_set,Observed_delta,CI95_low,CI95_high,Share_no_harm,Excludes_zero
-No engineered features,-0.0091,-0.0101,-0.008,0.0,yes
-No Thermal_impact,-0.0001,-0.0004,0.0003,0.3102,no
-No Soil_Health,-0.0005,-0.0013,0.0003,0.1156,no
-No Water_Deficit,-0.0084,-0.0093,-0.0074,0.0,yes
-Plus standalone E,0.0015,0.001,0.0021,1.0,yes
+Arm,Reference,Observed_delta,CI95_low,CI95_high,Share_no_harm,Excludes_zero
+No engineered features,All 38 features (reference),-0.009,-0.0101,-0.008,0.0,yes
+No Thermal_impact,All 38 features (reference),-0.0001,-0.0004,0.0003,0.3038,no
+No Soil_Health,All 38 features (reference),-0.0005,-0.0013,0.0003,0.1035,no
+No Water_Deficit,All 38 features (reference),-0.0084,-0.0094,-0.0075,0.0,yes
+Plus standalone E,All 38 features (reference),0.0015,0.001,0.002,1.0,yes

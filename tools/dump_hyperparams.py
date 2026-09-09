@@ -120,7 +120,9 @@ def build_table():
         r"\centering",
         r"\caption{Search space and selected hyperparameters per arena. Bold marks a"
         r" value selected at an extreme of a grid of three or more levels. A dash marks"
-        r" a model not trained in that arena. The two baselines of"
+        r" a model with no value selected in that arena, either because it was not"
+        r" trained there or, in the case of the full-data $K$-NN, because it was fitted"
+        r" once at a borrowed $K$ with no search to select anything. The two baselines of"
         r" Section~\ref{sec:results} carry no tuned hyperparameters and are omitted:"
         r" they are left un-tuned by design, so that they measure a floor rather than"
         r" compete.}",

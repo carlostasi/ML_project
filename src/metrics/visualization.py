@@ -251,3 +251,8 @@ def plot_multiclass_roc(
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(f"ROC Cruve saved: {filepath}")
+
+    # Returned so the caller can record them: until now the AUCs existed only
+    # inside the legend of a PNG, which made every AUC quoted in the report
+    # untraceable to any artefact the pipeline writes.
+    return {classes[i]: round(float(roc_auc[i]), 4) for i in range(n_classes)}

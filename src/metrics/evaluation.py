@@ -1,4 +1,5 @@
-import os 
+import os
+import time
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix, f1_score, accuracy_score, recall_score, precision_score
@@ -13,7 +14,13 @@ def evaluate_model(model, X_test, y_test, model_name="Model"):
     """
     print(f"\n--- Performance evaluation for: {model_name} ---")
 
+    # Timed because the models differ by orders of magnitude in what it costs to
+    # answer a query, and the report argues about that cost. K-NN in particular
+    # does all of its work here: fitting one is free, scoring the test set is not.
+    started = time.time()
     y_pred = model.predict(X_test)
+    seconds = time.time() - started
+    print(f"Prediction over {len(y_test)} rows: {seconds:.1f}s")
 
     target_names = ['Low', 'Medium', 'High']
 
@@ -39,6 +46,7 @@ def evaluate_model(model, X_test, y_test, model_name="Model"):
         "Accuracy": accuracy,
         "Recall": recall,
         "Precision": precision,
+        "Predict_seconds": round(seconds, 1),
     }
 
     # Per-class figures are kept alongside the macro averages: recall on the
@@ -65,8 +73,11 @@ def plot_save_confusion_matrix(y_test, y_pred, model_name="Model", output_dir="r
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=target_names, yticklabels=target_names)
 
-    suffix = "- Entire dataset" if big_data else ""
-    plt.title(f"Confusion matrix - {model_name} ({suffix})")
+    # Two separate things used to share one variable here, and the arena label
+    # was empty outside big-data mode, which titled every balanced-arena figure
+    # "Confusion matrix - K-NN ()". These figures are in the report.
+    arena = "entire dataset" if big_data else "balanced subsample"
+    plt.title(f"Confusion matrix - {model_name} ({arena})")
     plt.ylabel("True label")
     plt.xlabel("Predicted label")
     plt.tight_layout()
