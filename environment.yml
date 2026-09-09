@@ -1,0 +1,51 @@
+# Predicting Irrigation Need -- conda environment.
+#
+#   conda env create -f environment.yml
+#   conda activate irrigation
+#   python main.py
+#
+# No build strings and no platform lock, so this resolves on Windows, Linux and
+# macOS. If conda is not available, requirements.txt installs the same versions
+# through pip.
+#
+# The versions are the ones the reported results were produced with, checked
+# against the environment that produced them on 2026-09-11: all nine matched.
+# They are pinned rather than left open because several numbers in the report
+# are timings, and a different BLAS or a different threadpoolctl moves them.
+# If a pin turns out to be unavailable for your platform, relaxing "=" to ">="
+# on that one line is safe for running the pipeline; it may shift the fourth
+# decimal of a score.
+
+name: irrigation
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.11.15
+
+  # Imported directly by the pipeline.
+  - numpy=2.4.6
+  - pandas=3.0.3
+  - scikit-learn=1.9.0
+  - matplotlib=3.10.9
+  - seaborn=0.13.2
+  - joblib=1.5.3
+
+  # The "cpu*" build glob is not decoration. Left as a plain version pin,
+  # conda-forge resolves xgboost to its cuda129 variant and pulls in the CUDA
+  # runtime -- gigabytes, for a project that never touches a GPU. "cpu" is the
+  # conda-forge variant prefix on every platform, so this stays portable.
+  - xgboost=3.2.0=cpu*
+
+  # Imported nowhere, pinned deliberately. scipy backs scikit-learn and seaborn;
+  # threadpoolctl governs how many threads the BLAS and OpenMP kernels take,
+  # which is what the reported prediction timings depend on.
+  - scipy=1.17.1
+  - threadpoolctl=3.6.0
+
+# OpenMP note: numpy built against Intel MKL alongside scikit-learn and xgboost
+# loads two OpenMP runtimes into one process, which threadpoolctl warns about.
+# The warning is harmless -- it concerns thread scheduling, not arithmetic --
+# and main.py sets KMP_DUPLICATE_LIB_OK as its first statement so the Intel
+# runtime does not abort the process.

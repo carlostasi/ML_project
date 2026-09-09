@@ -1,0 +1,4 @@
+Model,Metric,Private_score,Public_score,Internal_score,Rows_scored,Source,Retrieved
+decision_tree_d8,balanced_accuracy,0.96073,0.95973,0.9595,270000,Kaggle Playground S6E4 leaderboard (late submission),2026-09-10
+random_forest,balanced_accuracy,0.96257,0.95916,0.9601,270000,Kaggle Playground S6E4 leaderboard (late submission),2026-09-10
+xgboost,balanced_accuracy,0.96785,0.96630,0.9671,270000,Kaggle Playground S6E4 leaderboard (late submission),2026-09-10

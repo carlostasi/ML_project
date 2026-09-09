@@ -1,7 +1,6 @@
 from src.models.models import (
     run_svm,
     run_knn,
-    run_knn_fixed,
     tuned_k,
     run_xgboost,
     run_random_forest,

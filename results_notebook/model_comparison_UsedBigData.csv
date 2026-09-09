@@ -1,7 +1,7 @@
 Model_name,F1-Score,Accuracy,Recall,Precision
 Majority baseline,0.2466,0.5872,0.3333,0.1957
 Decision Tree (d=8),0.9682,0.9850,0.9595,0.9776
-K-NN (untuned),0.7374,0.8790,0.6916,0.8896
+K-NN,0.7514,0.8671,0.7071,0.8580
 Linear SVM,0.7536,0.8754,0.7156,0.8439
 Random Forest,0.9682,0.9850,0.9601,0.9767
 XGBoost,0.9560,0.9817,0.9671,0.9460

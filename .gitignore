@@ -8,6 +8,10 @@ __pycache__/
 # Saved models (binary, regenerable)
 saved_models*/
 
+# Kaggle submission files (regenerable with tools/make_submission.py)
+submissions/
+
 .vscode/
 
 CLAUDE.md
+docs/

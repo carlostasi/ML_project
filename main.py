@@ -15,8 +15,6 @@ from src.data.preprocessing import (
 from src.models import (
     run_svm,
     run_knn,
-    run_knn_fixed,
-    tuned_k,
     run_xgboost,
     run_random_forest,
     run_majority_baseline,
@@ -120,27 +118,18 @@ def main():
     print("\n" + "=" * 50)
     print("K-NN")
     print("=" * 50)
-    if not FORCE_RETRAIN and model_exists("knn", use_big_data=USE_BIG_DATA) and not USE_BIG_DATA:
+    if not FORCE_RETRAIN and model_exists("knn", use_big_data=USE_BIG_DATA):
         best_knn = load_model("knn", use_big_data=USE_BIG_DATA)
-    elif USE_BIG_DATA:
-        # What the memory wall excludes on this arena is the grid search, not
-        # the fit: ten values of K at cv=3 is thirty passes of the same pairwise
-        # distance computation, each worker holding its own copy of the data.
-        # One pass is affordable, so K-NN appears here as an untuned reference
-        # at the K the balanced arena selected.
-        #
-        # It is deliberately not saved. Fitting a K-NN only stores the training
-        # matrix, so the pickle would be ~150 MB of rows that already live in
-        # data/train.csv, and caching saves nothing because the cost is all in
-        # prediction. Worse, tools/dump_hyperparams.py reads saved_models*/ as
-        # the record of what GridSearchCV selected, and a pickle here would make
-        # the report's table claim a tuned K for an arena that never tuned one.
-        borrowed = tuned_k(use_big_data=True)
-        print_log(f"K-NN: no grid search on this arena, fitting once at K={borrowed}.")
-        best_knn, _ = run_knn_fixed(X_train_processed, y_train, n_neighbors=borrowed)
     else:
-        print_log("Cross-Validation for K-NN...")
-        best_knn, _ = run_knn(X_train_processed, y_train, bypass=False)
+        # The full partition searches over K single-process. One pass already
+        # saturates the machine through the OpenMP distance kernel, so parallel
+        # candidates buy no speed and only multiply the working memory; the wall
+        # clock is thirty passes of about half a minute either way. This is the
+        # search the project used to skip, on the belief that a K-NN could not be
+        # run here at all -- a belief that a measured 42-second pass disproved.
+        knn_jobs = 1 if USE_BIG_DATA else -1
+        print_log(f"Cross-Validation for K-NN (n_jobs={knn_jobs})...")
+        best_knn, _ = run_knn(X_train_processed, y_train, n_jobs=knn_jobs)
         if best_knn is not None:
             save_model(best_knn, "knn", use_big_data=USE_BIG_DATA)
         print_log("Best configuration K-NN completed.")
@@ -204,12 +193,10 @@ def main():
     print_log("=== PHASE 4: Final Evaluation on test data ===")
     all_metrics = []
     svm_label = "Linear SVM" if fast_svm_mode else "RBF SVM"
-    # Labelled so that no table implies a grid search that never ran.
-    knn_label = "K-NN (untuned)" if USE_BIG_DATA else "K-NN"
     models_to_evaluate = [
         (best_majority, "Majority baseline"),
         (best_tree, tree_label),
-        (best_knn, knn_label),
+        (best_knn, "K-NN"),
         (best_svm, svm_label),
         (best_linear_svm, "Linear SVM"),
         (best_rf, "Random Forest"),

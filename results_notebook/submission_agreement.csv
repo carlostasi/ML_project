@@ -1,0 +1,2 @@
+Model_a,Model_b,Rows,Identical,Identical_pct,Disagreements,Adjacent,Low_vs_High
+decision_tree_d8,random_forest,270000,269572,99.841,428,428,0

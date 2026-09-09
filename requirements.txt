@@ -1,0 +1,22 @@
+# Predicting Irrigation Need -- pinned to the environment the reported results
+# were produced in (Python 3.11.15, Windows 11).
+#
+#   python -m venv .venv && .venv\Scripts\activate     (or: conda create -n irrigation python=3.11)
+#   pip install -r requirements.txt
+#   python main.py
+#
+# Note on OpenMP: installing numpy against Intel MKL alongside scikit-learn and
+# xgboost loads two OpenMP runtimes in the same process, which threadpoolctl
+# warns about. The warning is harmless here -- it concerns thread scheduling, not
+# arithmetic -- and main.py sets KMP_DUPLICATE_LIB_OK before importing anything
+# so the Intel runtime does not abort the process.
+
+numpy==2.4.6
+pandas==3.0.3
+scipy==1.17.1
+scikit-learn==1.9.0
+xgboost==3.2.0
+matplotlib==3.10.9
+seaborn==0.13.2
+joblib==1.5.3
+threadpoolctl==3.6.0

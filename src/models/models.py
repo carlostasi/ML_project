@@ -10,7 +10,16 @@ from sklearn.model_selection import GridSearchCV
 from src.models.load_store import load_model, model_exists
 
 
-def run_knn(X_train, y_train, bypass=False):
+def run_knn(X_train, y_train, bypass=False, n_jobs=-1):
+    """
+    Grid search over K.
+
+    `n_jobs` is the parallelism of the *search*, not of the distance computation.
+    On the full partition it should be 1: a single pass already uses every core
+    through scikit-learn's OpenMP distance kernel, so running candidates in
+    parallel buys no speed at all and only multiplies the working memory. Thirty
+    passes over 504,000 training rows take about a quarter of an hour either way.
+    """
     if bypass:
         print("[INFO] K-NN tuning skipped for RAM limits.")
         return None, None
@@ -18,7 +27,7 @@ def run_knn(X_train, y_train, bypass=False):
 
     param_grid = {'n_neighbors': [3, 5, 7, 9, 11, 31, 51, 101, 151, 200]}
 
-    grid_search = GridSearchCV(knn, param_grid, cv=3, scoring='f1_macro', n_jobs=-1, verbose=3)
+    grid_search = GridSearchCV(knn, param_grid, cv=3, scoring='f1_macro', n_jobs=n_jobs, verbose=3)
     grid_search.fit(X_train, y_train)
 
     # Print best model parameters
@@ -104,37 +113,15 @@ def tuned_k(use_big_data=False, default=31):
     """
     Read K back from a tuned K-NN, so that no caller has to hardcode it.
 
-    Falls back to the balanced arena when the requested one has no pickle. The
-    full-data arena never runs a grid search over K, so borrowing the value the
-    balanced arena selected keeps the two arenas comparable instead of inventing
-    a number.
+    Falls back to the balanced arena when the requested one has no pickle, which
+    is what the full-data arena needed before it had a search of its own. Used by
+    the PCA sweep, which must run at the K of the arena it is sweeping.
     """
     if model_exists("knn", use_big_data=use_big_data):
         return load_model("knn", use_big_data=use_big_data).get_params()["n_neighbors"]
     if use_big_data and model_exists("knn", use_big_data=False):
         return load_model("knn", use_big_data=False).get_params()["n_neighbors"]
     return default
-
-
-def run_knn_fixed(X_train, y_train, n_neighbors):
-    """
-    K-NN at a fixed K, with no search. This is how the full-data arena gets a
-    K-NN at all.
-
-    What the memory wall excludes on that arena is the *tuning*, not the fitting.
-    A grid over ten values of K at cv=3 is thirty passes of the same
-    pairwise-distance computation, each holding its own copy of the data under
-    n_jobs=-1; one pass is affordable. Fitting itself is free — a K-NN stores the
-    training matrix and nothing else — so the whole cost is deferred to
-    prediction, which happens once per evaluation either way.
-
-    Returns (model, None) like the other un-tuned references, and the caller
-    labels it as untuned so no table implies a search that never ran.
-    """
-    model = KNeighborsClassifier(n_neighbors=n_neighbors)
-    model.fit(X_train, y_train)
-    print(f"\n >>> K-NN fitted at K={n_neighbors} (no search: untuned reference).\n")
-    return model, None
 
 
 def run_majority_baseline(X_train, y_train):

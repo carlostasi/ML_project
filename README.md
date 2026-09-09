@@ -17,10 +17,26 @@ read **alongside** recall on `High`, never accuracy.
 
 ## Running it
 
+With conda:
+
+```
+conda env create -f environment.yml
+conda activate irrigation
+python main.py
+```
+
+With pip instead:
+
 ```
 pip install -r requirements.txt
 python main.py
 ```
+
+Both install the same nine libraries at the same versions, on Python 3.11. Those
+versions are the ones the reported results were produced with. They are pinned
+because several figures in the report are wall-clock timings, which move with the
+BLAS build and the thread count; if a pin is unavailable on your platform,
+loosening that one line will still run the pipeline.
 
 `main.py` is the only entry point and runs the whole pipeline: load →
 feature engineering → stratified split → (optional) balancing → preprocessing →
