@@ -16,7 +16,7 @@
 # on that one line is safe for running the pipeline; it may shift the fourth
 # decimal of a score.
 
-name: irrigation
+name: irrigation_exam
 
 channels:
   - conda-forge
